@@ -9,7 +9,7 @@ NNODES=${WORLD_SIZE:-1}
 deepspeed=./scripts/zero3.json
 
 # Model configuration
-llm=/home/william/model/Lingshu-7B  # Using HuggingFace model ID
+llm=/mnt/d/skinalor/model/Lingshu-7B  # Using HuggingFace model ID
 
 # Training hyperparameters
 lr=2e-7
@@ -20,7 +20,7 @@ grad_accum_steps=4
 entry_file=qwenvl/train/train_qwen.py
 
 # Dataset configuration (replace with public dataset names)
-datasets=/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl
+datasets=/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_train.jsonl
 
 # Output configuration
 run_name="lingshu-7b-baseline"

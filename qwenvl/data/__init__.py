@@ -27,8 +27,8 @@ VIDEOCHATGPT = {
 }
 
 DERM1M = {
-    "annotation_path": "/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl",
-    "data_path": "/home/william/dataset/skin/Derm1M/"
+    "annotation_path": "/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_train.jsonl",
+    "data_path": "/mnt/d/skinalor/dataset/skin/Derm1M/"
 }
 
 data_dict = {
