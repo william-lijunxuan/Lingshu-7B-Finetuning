@@ -1,3 +1,10 @@
 /qwenvl/train/output/**
 /qwenvl/train/wandb/**
 /.idea/**
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+*.egg-info/
+.cache/
