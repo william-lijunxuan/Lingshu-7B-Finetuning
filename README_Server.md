@@ -3,29 +3,41 @@ VLM finetuning
 
 ## Download code
 ```bash
+cd /mnt/d/skinalor/model
+
 git clone https://github.com/william-lijunxuan/Lingshu-7B-Finetuning.git
 ```
 ## Create conda env
 
 ```bash
 cd Lingshu-7B-Finetuning
+
 conda env update -f environment.yml --prune
+
 conda activate lingshu
+
 cd qwenvl/train
+
 python run_sft.py
 ```
 
 ## Download model
 Download it to the **model** directory.
 ```bash
+cd /mnt/d/skinalor/model
+
 git clone https://huggingface.co/lingshu-medical-mllm/Lingshu-7B
 ```
 
 ## Download dataset
 Download it to the **dataset** directory.
 ```bash
+cd /mnt/d/skinalor/dataset
+
 git clone https://huggingface.co/datasets/redlessone/Derm1M
+
 cd Derm1M
+
 # Unzip the file
 for file in *.zip; do
     unzip -o "$file" -d "${file%.zip}"
