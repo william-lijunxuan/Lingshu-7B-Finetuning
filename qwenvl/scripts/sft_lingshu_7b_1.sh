@@ -9,7 +9,7 @@ NPROC_PER_NODE=${NPROC_PER_NODE:-1}
 deepspeed=/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
 llm=/mnt/d/skinalor/model/Lingshu-7B
 entry_file=/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
-datasets=/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_train.jsonl
+datasets=derm1m
 run_name="lingshu-7b-baseline"
 output_dir=./output
 
