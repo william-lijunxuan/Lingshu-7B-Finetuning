@@ -7,19 +7,7 @@ cd /mnt/d/skinalor/model
 
 git clone https://github.com/william-lijunxuan/Lingshu-7B-Finetuning.git
 ```
-## Create conda env
 
-```bash
-cd Lingshu-7B-Finetuning
-
-conda env update -f environment.yml --prune
-
-conda activate lingshu
-
-cd qwenvl/train
-
-python run_sft.py
-```
 
 ## Download model
 Download it to the **model** directory.
@@ -53,6 +41,20 @@ done
 #unzip youtube.zip -d youtube
 
 ```
+## Create conda env
+
+```bash
+cd Lingshu-7B-Finetuning
+
+conda env update -f environment.yml --prune
+
+conda activate lingshu
+
+cd qwenvl/train
+
+python run_sft.py
+```
+
 ##  Login wandb
 ```bash
 wandb
