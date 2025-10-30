@@ -4,7 +4,8 @@ from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
 
 BASE = "/home/william/model/Lingshu-7B"
-ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/train/output"
+ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/output"
+# ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/train/output"
 IMAGE = "/home/william/dataset/skin/Derm1M/IIYI/7_3.png"
 
 def load_model(base_path, adapter_path=None):

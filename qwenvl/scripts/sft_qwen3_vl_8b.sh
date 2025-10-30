@@ -10,7 +10,7 @@ NNODES=${WORLD_SIZE:-1}
 deepspeed=/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
 
 # Model configuration
-llm=/home/william/model/Lingshu-7B  # Using HuggingFace model ID
+llm=/home/william/model/Qwen3-VL-8B-Thinking  # Using HuggingFace model ID
 
 # Training hyperparameters
 lr=2e-7
@@ -24,8 +24,8 @@ entry_file=/home/william/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
 datasets=derm1m
 
 # Output configuration
-run_name="lingshu-7b-baseline"
-output_dir=./output
+run_name="qwen3-vl-8b-baseline"
+output_dir=./outputqwen3vl
 
 # Training arguments
 args="
@@ -45,6 +45,9 @@ args="
     --max_pixels 50176 \
     --min_pixels 784 \
     --lora_enable True\
+    --lora_r 8 \
+    --lora_alpha 16 \
+    --lora_dropout 0.0 \
     --eval_strategy no \
     --save_strategy steps \
     --save_steps 1000 \
