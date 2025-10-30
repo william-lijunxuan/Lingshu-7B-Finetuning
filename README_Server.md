@@ -50,9 +50,9 @@ conda env update -f environment.yml --prune
 
 conda activate lingshu
 
-cd qwenvl/train
+cd qwenvl/scripts
 
-python run_sft.py
+bash sft_lingshu_7b.sh
 ```
 
 ##  Login wandb
