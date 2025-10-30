@@ -1,4 +1,7 @@
 /qwenvl/train/output/**
+/qwenvl/scripts/output/**
+/qwenvl/scripts/outputqwen3vl/**
+/qwenvl/scripts/wandb/**
 /qwenvl/train/wandb/**
 /.idea/**
 __pycache__/
