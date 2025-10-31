@@ -19,19 +19,15 @@ model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
 
 processor = AutoProcessor.from_pretrained(BASE,use_fast=True)
 
-model = PeftModel.from_pretrained(model, ADAPTER)
-model = model.merge_and_unload()
-model.eval()
+# model = PeftModel.from_pretrained(model, ADAPTER)
+# model = model.merge_and_unload()
+# model.eval()
 
 messages = [
     {
         "role": "user",
         "content": [
-            {
-                "type": "image",
-                "image": IMAGE,
-            },
-            {"type": "text", "text": "Describe this image."},
+            {"type": "text", "text": "The patient has a body temperature of 38.8°C, feels weak and tired, experiences chills and sweating, and complains of a headache and sore throat. What illness could this indicate?"},
         ],
     }
 ]

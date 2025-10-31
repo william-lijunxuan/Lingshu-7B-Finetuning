@@ -11,3 +11,5 @@ __pycache__/
 *.pytest_cache/
 *.egg-info/
 .cache/
+/qwenvl/eval/log/**
+/qwenvl/eval/eval_results/**
