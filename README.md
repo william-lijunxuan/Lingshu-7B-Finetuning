@@ -11,9 +11,8 @@ git clone https://github.com/william-lijunxuan/Lingshu-7B-Finetuning.git
 cd Lingshu-7B-Finetuning
 conda env update -f environment.yml --prune
 conda activate lingshu
-cd qwenvl/train
-python run_sft.py
 ```
+
 
 ## Download model
 Download it to the **model** directory.
@@ -41,6 +40,18 @@ done
 #unzip youtube.zip -d youtube
 
 ```
+
+## option1 run fine tuning Lingshu
+```bash
+cd qwenvl/scripts
+bash sft_lingshu_7b.sh
+```
+# option2 run fine tuning Lingshu
+```bash
+cd qwenvl/scripts
+bash sft_lingshu_7b.sh
+```
+
 ##  Login wandb
 ```bash
 wandb

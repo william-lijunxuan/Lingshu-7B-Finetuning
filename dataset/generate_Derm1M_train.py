@@ -25,18 +25,28 @@ import pandas as pd
 # Input CSV and output JSONL paths
 CSV_PATH = r"/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
 CSV_PATH = CSV_PATH.replace("\\", "/")
-OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "Derm1M_train.jsonl")
+OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "Derm1M_train_qwen_prompt.jsonl")
 
 # Fixed human prompt; the visual placeholder token is appended at runtime
+# HUMAN_PROMPT = (
+#     "You are a board‐certified dermatology AI specialist. A patient has just uploaded an image of a skin lesion. "
+#     "Carefully examine the lesion’s visual features—color, shape, borders, surface texture, and anatomic location—and "
+#     "then compose a single, fully descriptive diagnostic sentence in English. Mirror the expert style by:\n"
+#     "            1. Opening with a concise description of the key visual finding (e.g. “The red, smooth, exophytic nodule with a slightly narrowed base…”).\n"
+#     "            2. Stating the most likely diagnosis (e.g. “…may indicate squamous cell carcinoma.”).\n"
+#     "            3. Optionally noting any next steps for confirmation (e.g. “Further biopsy is recommended to confirm the diagnosis.”).\n\n"
+#     "            Example output (for a smooth red papule on the lip):\n"
+#     "            “The red, smooth, dome-shaped papule on the lip, with slight keratosis and prominent capillaries, is most consistent with basal cell carcinoma; a skin biopsy is advised for confirmation.“"
+# )
+
 HUMAN_PROMPT = (
-    "You are a board‐certified dermatology AI specialist. A patient has just uploaded an image of a skin lesion. "
-    "Carefully examine the lesion’s visual features—color, shape, borders, surface texture, and anatomic location—and "
-    "then compose a single, fully descriptive diagnostic sentence in English. Mirror the expert style by:\n"
-    "            1. Opening with a concise description of the key visual finding (e.g. “The red, smooth, exophytic nodule with a slightly narrowed base…”).\n"
-    "            2. Stating the most likely diagnosis (e.g. “…may indicate squamous cell carcinoma.”).\n"
-    "            3. Optionally noting any next steps for confirmation (e.g. “Further biopsy is recommended to confirm the diagnosis.”).\n\n"
-    "            Example output (for a smooth red papule on the lip):\n"
-    "            “The red, smooth, dome-shaped papule on the lip, with slight keratosis and prominent capillaries, is most consistent with basal cell carcinoma; a skin biopsy is advised for confirmation.“"
+    '''Write a description of the following skin lesion image, and your description should include the following
+information if they are clearly discernible from the image.
+1. region: The potential area of the body where the lesion or wound has been examined.
+2. general skin texture and hair growth.
+3. lesions: size (if scale is available in the image), shape, definition, color, texture.
+4. elevation: Description of the lesion or wound relative to the skin surface of the patient.
+5. skin texture surrounding the lesion (e.g. coarse/thickness/atrophic/erythema/bleeding, etc)'''
 )
 
 def main():
