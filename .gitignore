@@ -13,3 +13,4 @@ __pycache__/
 .cache/
 /qwenvl/eval/log/**
 /qwenvl/eval/eval_results/**
+/qwenvl/scripts/output30K.zip
