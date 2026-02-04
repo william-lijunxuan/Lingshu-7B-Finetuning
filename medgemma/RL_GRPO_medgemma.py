@@ -17,11 +17,11 @@ from trl import GRPOConfig, GRPOTrainer
 # =========================
 # 0) Config
 # =========================
-DATA_PATH = "/home/william/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
-BASE_IMG_DIR = "/home/william/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/home/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
+BASE_IMG_DIR = "/home/root/dataset/skin/SkinCAP/skincap"
 
-CKPT = "/home/william/model/medgemma-1.5-4b-it"
-OUTPUT_DIR = "/home/william/model/GRPO_medgemma4b"
+CKPT = "/home/root/model/medgemma-1.5-4b-it"
+OUTPUT_DIR = "/home/root/model/GRPO_medgemma4b"
 
 # TRAIN_SIZE = 3900
 # EVAL_SIZE = 100

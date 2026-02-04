@@ -8,9 +8,9 @@ from qwenvl.train.argument import ModelArguments, DataArguments, TrainingArgumen
 
 def main():
     cfg = {
-        "deepspeed": "/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json",
-        "model_name_or_path": "/home/william/model/Lingshu-7B",
-        # "dataset_use": "/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl",
+        "deepspeed": "/home/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json",
+        "model_name_or_path": "/home/root/model/Lingshu-7B",
+        # "dataset_use": "/home/root/dataset/skin/Derm1M/Derm1M_train.jsonl",
         "dataset_use": "derm1m",
         "data_flatten": True,
         "tune_mm_vision": False,

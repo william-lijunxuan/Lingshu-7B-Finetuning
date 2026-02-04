@@ -8,7 +8,7 @@ import pandas as pd
 from pathlib import Path
 
 # Inputs/outputs
-CSV_PATH = r"/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv".replace("\\", "/")
+CSV_PATH = r"/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv".replace("\\", "/")
 OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "eval_Derm1M_train_json_1k.jsonl")
 
 N_SAMPLES = 1000

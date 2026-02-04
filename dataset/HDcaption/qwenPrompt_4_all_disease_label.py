@@ -7,7 +7,7 @@ caption contains no CJK characters (regex range: [\u3400-\u4dbf\u4e00-\u9fff\uf9
 
 Normalized disease_label is not “no definitive diagnosis”.
 
-Normalized disease_label is in the whitelist (file: /home/william/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt; fallback to /mnt/data/derm1m_table10_diseases.txt if missing).
+Normalized disease_label is in the whitelist (file: /home/root/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt; fallback to /mnt/data/derm1m_table10_diseases.txt if missing).
 
 Normalized body_location is not “No body location information”.
 
@@ -20,9 +20,9 @@ import unicodedata
 import pandas as pd
 from pathlib import Path
 
-IN_PATH  = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
-OUT_PATH = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
-DISEASE_LIST = "/home/william/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt"
+IN_PATH  = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
+OUT_PATH = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
+DISEASE_LIST = "/home/root/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt"
 MIN_WORDS = 25
 CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uffef]")
 

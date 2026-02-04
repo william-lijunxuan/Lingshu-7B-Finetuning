@@ -6,8 +6,8 @@ import pandas as pd
 from pathlib import Path
 
 # -------- paths --------
-IN_PATH  = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"   # .csv / .xlsx / .xls
-OUT_PATH = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_formatted.xlsx"
+IN_PATH  = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"   # .csv / .xlsx / .xls
+OUT_PATH = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_formatted.xlsx"
 MIN_WORDS = 20
 
 # -------- lexicons (augmented) --------

@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import re
 
-CSV_PATH = r"/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
+CSV_PATH = r"/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
 CSV_PATH = CSV_PATH.replace("\\", "/")
 
 

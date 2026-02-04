@@ -7,7 +7,7 @@ import json
 import pandas as pd
 
 # Input CSV and output JSONL paths
-CSV_PATH = r"/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
+CSV_PATH = r"/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
 CSV_PATH = CSV_PATH.replace("\\", "/")
 OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "eval_Derm1M_train_json_1k.jsonl")
 
