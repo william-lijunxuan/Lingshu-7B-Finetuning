@@ -329,7 +329,7 @@ def build_training_args():
 
         use_vllm=True,
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.35,   # 0.30
+        vllm_gpu_memory_utilization=0.92,   # 0.30
         bf16=True,
 
         gradient_checkpointing=True,
