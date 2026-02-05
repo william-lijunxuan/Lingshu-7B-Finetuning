@@ -327,9 +327,9 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        use_vllm=True,                      # 强烈建议
+        use_vllm=True,
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.55,   # 0.30 太保守，生成卡会闲着
+        vllm_gpu_memory_utilization=0.35,   # 0.30
         bf16=True,
 
         gradient_checkpointing=True,
