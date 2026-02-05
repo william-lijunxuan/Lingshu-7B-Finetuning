@@ -299,7 +299,7 @@ def build_training_args():
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
         model_init_kwargs={
-            "device_map": "auto",
+            # "device_map": "auto",
             "dtype": torch.bfloat16,
             "attn_implementation": "eager",
         },
