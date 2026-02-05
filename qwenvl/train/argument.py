@@ -5,7 +5,7 @@ from typing import Dict, Optional, Sequence, List
 
 @dataclass
 class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="/home/root/model/Lingshu-7B")
+    model_name_or_path: Optional[str] = field(default="/root/model/Lingshu-7B")
     tune_mm_llm: bool = field(default=False)
     tune_mm_mlp: bool = field(default=False)
     tune_mm_vision: bool = field(default=False)

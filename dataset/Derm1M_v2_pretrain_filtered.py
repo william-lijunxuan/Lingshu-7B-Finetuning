@@ -5,8 +5,8 @@ import re
 import pandas as pd
 from pathlib import Path
 
-IN_PATH  = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
-OUT_PATH = "/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_filtered.xlsx"
+IN_PATH  = "/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
+OUT_PATH = "/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_filtered.xlsx"
 
 REQUIRED_COLS = [
     "disease_label",

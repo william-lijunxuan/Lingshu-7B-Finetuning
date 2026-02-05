@@ -6,9 +6,9 @@ MASTER_PORT=${MASTER_PORT:-$(shuf -i 20001-29999 -n 1)}
 NNODES=${WORLD_SIZE:-1}
 NPROC_PER_NODE=${NPROC_PER_NODE:-1}
 
-deepspeed=/home/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
-llm=/home/root/model/Lingshu-7B
-entry_file=/home/root/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
+deepspeed=/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
+llm=/root/model/Lingshu-7B
+entry_file=/root/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
 datasets=derm1m
 run_name="lingshu-7b-baseline"
 output_dir=./output

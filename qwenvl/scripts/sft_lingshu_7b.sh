@@ -7,10 +7,10 @@ MASTER_PORT=${MASTER_PORT:-$(shuf -i 20001-29999 -n 1)}
 NNODES=${WORLD_SIZE:-1}
 
 # DeepSpeed configuration
-deepspeed=/home/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
+deepspeed=/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
 
 # Model configuration
-llm=/home/root/model/Lingshu-7B  # Using HuggingFace model ID
+llm=/root/model/Lingshu-7B  # Using HuggingFace model ID
 
 # Training hyperparameters
 lr=2e-7
@@ -18,7 +18,7 @@ batch_size=1
 grad_accum_steps=1
 
 # Training entry point
-entry_file=/home/root/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
+entry_file=/root/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
 
 # Dataset configuration (replace with public dataset names)
 datasets=derm1m

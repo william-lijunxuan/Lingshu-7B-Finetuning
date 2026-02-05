@@ -23,7 +23,7 @@ import json
 from pathlib import Path
 import pandas as pd
 
-IN_PATH = r"/home/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_structured_4ok_multiRegion.xlsx".replace("\\", "/")
+IN_PATH = r"/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_structured_4ok_multiRegion.xlsx".replace("\\", "/")
 OUT_PATH = os.path.join(os.path.dirname(IN_PATH), "Derm1M_train_qwen_prompt_eval.jsonl")
 
 HUMAN_PROMPT = (

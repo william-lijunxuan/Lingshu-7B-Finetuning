@@ -3,10 +3,10 @@ from PIL import Image
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
 
-BASE = "/home/root/model/Lingshu-7B"
-ADAPTER = "/home/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/output"
-# ADAPTER = "/home/root/model/Lingshu-7B-Finetuning/qwenvl/train/output"
-IMAGE = "/home/root/dataset/skin/Derm1M/IIYI/7_3.png"
+BASE = "/root/model/Lingshu-7B"
+ADAPTER = "/root/model/Lingshu-7B-Finetuning/qwenvl/scripts/output"
+# ADAPTER = "/root/model/Lingshu-7B-Finetuning/qwenvl/train/output"
+IMAGE = "/root/dataset/skin/Derm1M/IIYI/7_3.png"
 
 def load_model(base_path, adapter_path=None):
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(

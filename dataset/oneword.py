@@ -5,8 +5,8 @@ import json
 import re
 from pathlib import Path
 
-IN_PATH  = Path("/home/root/dataset/skin/Derm1M/Derm1M_train.jsonl")
-OUT_PATH = Path("/home/root/dataset/skin/Derm1M/Derm1M_train_1word.jsonl")
+IN_PATH  = Path("/root/dataset/skin/Derm1M/Derm1M_train.jsonl")
+OUT_PATH = Path("/root/dataset/skin/Derm1M/Derm1M_train_1word.jsonl")
 
 
 ONE_WORD = re.compile(r"^[A-Za-z]+(?:-[A-Za-z]+)*$")
