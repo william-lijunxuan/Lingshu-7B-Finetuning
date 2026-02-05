@@ -316,8 +316,8 @@ def build_training_args():
         gradient_accumulation_steps=8,      # DDP 后等效 batch 会变大
         num_generations=2,                  # 建议先 2，4 很吃显存/速度
 
-        max_prompt_length=256,
-        max_completion_length=512,          # 如果还想更快：256/384
+        max_prompt_length=128,
+        max_completion_length=256,          # 如果还想更快：256/384
 
         max_steps=1700,
         logging_steps=20,
