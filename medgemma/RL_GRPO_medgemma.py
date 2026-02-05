@@ -276,34 +276,71 @@ def correctness_reward_func(
 # =========================
 # 4) Train config
 # =========================
+# def build_training_args():
+#     return GRPOConfig(
+#         output_dir=OUTPUT_DIR,
+#         eval_on_start=False,
+#         learning_rate=5e-6,
+#         per_device_train_batch_size=1,
+#         gradient_accumulation_steps=4,
+#         num_generations=4,
+#         max_prompt_length=256,
+#         max_completion_length=512,
+#         max_steps=1700,
+#         logging_steps=20,
+#         save_steps=100,
+#         eval_strategy="steps",
+#         eval_steps=100,
+#         report_to="tensorboard",
+#         use_vllm=False,
+#         vllm_mode="colocate",
+#         vllm_gpu_memory_utilization=0.30,
+#         bf16=True,
+#         gradient_checkpointing=True,
+#         gradient_checkpointing_kwargs={"use_reentrant": False},
+#         model_init_kwargs={
+#             # "device_map": "auto",
+#             "dtype": torch.bfloat16,
+#             "attn_implementation": "eager",
+#         },
+#         push_to_hub=True,
+#     )
 def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
         eval_on_start=False,
+
         learning_rate=5e-6,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
-        num_generations=4,
+
+        per_device_train_batch_size=1,      # 先保持 1，稳定后再尝试 2
+        gradient_accumulation_steps=8,      # DDP 后等效 batch 会变大
+        num_generations=2,                  # 建议先 2，4 很吃显存/速度
+
         max_prompt_length=256,
-        max_completion_length=512,
+        max_completion_length=512,          # 如果还想更快：256/384
+
         max_steps=1700,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
-        eval_steps=100,
+        eval_steps=200,
+
         report_to="tensorboard",
-        use_vllm=False,
+
+        use_vllm=True,                      # 强烈建议
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.30,
+        vllm_gpu_memory_utilization=0.55,   # 0.30 太保守，生成卡会闲着
         bf16=True,
+
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
+
         model_init_kwargs={
-            # "device_map": "auto",
             "dtype": torch.bfloat16,
             "attn_implementation": "eager",
         },
-        push_to_hub=True,
+
+        push_to_hub=False,                  # 训练稳定后再开，避免网络/权限干扰
     )
 
 
