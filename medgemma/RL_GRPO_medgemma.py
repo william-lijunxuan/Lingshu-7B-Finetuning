@@ -26,8 +26,8 @@ OUTPUT_DIR = "/root/model/GRPO_medgemma4b"
 # TRAIN_SIZE = 3900
 # EVAL_SIZE = 100
 
-TRAIN_SIZE = 4
-EVAL_SIZE = 2
+TRAIN_SIZE = 100
+EVAL_SIZE = 30
 
 MODEL_TAG = "gemma1.5_4b_it"
 
