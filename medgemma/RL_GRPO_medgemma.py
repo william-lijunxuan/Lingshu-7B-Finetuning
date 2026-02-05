@@ -283,7 +283,7 @@ def build_training_args():
         learning_rate=5e-6,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=4,
-        num_generations=1,
+        num_generations=4,
         max_prompt_length=256,
         max_completion_length=512,
         max_steps=1700,
