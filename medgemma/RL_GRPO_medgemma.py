@@ -23,11 +23,11 @@ BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
 CKPT = "/root/model/medgemma-1.5-4b-it"
 OUTPUT_DIR = "/root/model/GRPO_medgemma4b"
 
-# TRAIN_SIZE = 3900
-# EVAL_SIZE = 100
+TRAIN_SIZE = 100
+EVAL_SIZE = 50
 
-TRAIN_SIZE = 3773
-EVAL_SIZE = 100
+# TRAIN_SIZE = 3773
+# EVAL_SIZE = 100
 
 MODEL_TAG = "gemma1.5_4b_it"
 
@@ -140,6 +140,11 @@ def build_dataset():
     ds = ds.map(to_prompt, remove_columns=ds.column_names)
 
     ds = ds.cast_column("image", datasets.Image())
+
+    ds = build_dataset()
+    print(ds[0].keys())
+    print(type(ds[0]["image"]))
+    print(ds[0]["prompt"][1]["content"][0])
     return ds
 
 
@@ -305,7 +310,7 @@ def build_training_args():
         max_prompt_length=128,
         max_completion_length=256,
 
-        max_steps=1700,
+        max_steps=10,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
