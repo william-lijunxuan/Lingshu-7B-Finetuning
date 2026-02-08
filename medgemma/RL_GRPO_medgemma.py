@@ -32,7 +32,6 @@ EVAL_SIZE = 100
 MODEL_TAG = "gemma1.5_4b_it"
 
 
-PROMPT_WITH_IMAGE_IN_CONTENT = True
 
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
@@ -106,35 +105,24 @@ def add_image_path(ex):
 def to_prompt(ex):
     q = ex.get("caption_zh_polish_en")
 
-    if PROMPT_WITH_IMAGE_IN_CONTENT:
-        prompt = [
-            {"role": "system", "content": SYSTEM},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": ex["image_path"]},
-                    {"type": "text", "text": USER_TEMPLATE.format(q=q)},
-                ],
-            },
-        ]
-        return {
-            "prompt": prompt,
-            "answer": ex["answer"],
-            "image_name": ex["image_name"],
-            "question_type": ex.get("question_type", ""),
-        }
-
     prompt = [
         {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": USER_TEMPLATE.format(q=q)},
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": ex["image_path"]},
+                {"type": "text", "text": USER_TEMPLATE.format(q=q)},
+            ],
+        },
     ]
     return {
         "prompt": prompt,
         "answer": ex["answer"],
         "image_name": ex["image_name"],
         "question_type": ex.get("question_type", ""),
-        "image": ex["image_path"],
+        "image": ex["image_path"]
     }
+
 
 
 def build_dataset():
@@ -142,15 +130,10 @@ def build_dataset():
     ds = Dataset.from_list(data)
 
     ds = ds.map(add_image_path)
-
-    if not PROMPT_WITH_IMAGE_IN_CONTENT:
-        ds = ds.cast_column("image_path", datasets.Value("string"))
-        ds = ds.map(to_prompt)
-        ds = ds.cast_column("image", datasets.Image())
-        keep_cols = ["prompt", "answer", "image", "image_name", "question_type"]
-    else:
-        ds = ds.map(to_prompt)
-        keep_cols = ["prompt", "answer", "image_name", "question_type"]
+    ds = ds.cast_column("image_path", datasets.Value("string"))
+    ds = ds.map(to_prompt)
+    ds = ds.cast_column("image", datasets.Image())
+    keep_cols = ["prompt", "answer", "image", "image_name", "question_type"]
 
     ds = ds.remove_columns([c for c in ds.column_names if c not in keep_cols])
     return ds
