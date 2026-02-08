@@ -103,11 +103,13 @@ def add_image_path(ex):
 
 
 def to_prompt(ex):
-    q = ex.get("caption_zh_polish_en") or ex.get("caption_zh") or ""
+    q = ex["caption_zh_polish_en"]
+    if q is None:
+        q="null"
     q = str(q)
 
     prompt = [
-        {"role": "system", "content": SYSTEM},
+        {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
         {
             "role": "user",
             "content": [
@@ -135,7 +137,6 @@ def build_dataset():
     ds = ds.map(add_image_path)
     ds = ds.cast_column("image_path", datasets.Value("string"))
 
-    # remove old columns so only the output of to_prompt remains
     ds = ds.map(to_prompt, remove_columns=ds.column_names)
 
     ds = ds.cast_column("image", datasets.Image())
