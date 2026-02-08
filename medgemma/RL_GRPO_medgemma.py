@@ -103,7 +103,8 @@ def add_image_path(ex):
 
 
 def to_prompt(ex):
-    q = ex.get("caption_zh_polish_en")
+    q = ex.get("caption_zh_polish_en") or ex.get("caption_zh") or ""
+    q = str(q)
 
     prompt = [
         {"role": "system", "content": SYSTEM},
@@ -115,13 +116,15 @@ def to_prompt(ex):
             ],
         },
     ]
+
     return {
         "prompt": prompt,
-        "answer": ex["answer"],
-        "image_name": ex["image_name"],
-        "question_type": ex.get("question_type", ""),
-        "image": ex["image_path"]
+        "answer": str(ex.get("answer", "")),
+        "image_name": str(ex.get("image_name", "")),
+        "question_type": str(ex.get("question_type", "")),
+        "image": ex["image_path"],
     }
+
 
 
 
@@ -131,11 +134,11 @@ def build_dataset():
 
     ds = ds.map(add_image_path)
     ds = ds.cast_column("image_path", datasets.Value("string"))
-    ds = ds.map(to_prompt)
-    ds = ds.cast_column("image", datasets.Image())
-    keep_cols = ["prompt", "answer", "image", "image_name", "question_type"]
 
-    ds = ds.remove_columns([c for c in ds.column_names if c not in keep_cols])
+    # remove old columns so only the output of to_prompt remains
+    ds = ds.map(to_prompt, remove_columns=ds.column_names)
+
+    ds = ds.cast_column("image", datasets.Image())
     return ds
 
 
