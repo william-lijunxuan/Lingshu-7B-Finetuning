@@ -86,7 +86,7 @@ SYSTEM = "SYSTEM INSTRUCTION: think silently if needed."
 USER_TEMPLATE = (
     "You are given a clinical image and a question.\n"
     "Return ONLY the disease name in English. No extra words.\n"
-    "Question: {q}\n"
+    "Image description: {q}\n"
 )
 
 
@@ -104,7 +104,7 @@ def add_image_path(ex):
 
 
 def to_prompt(ex):
-    q = ex.get("caption_zh_polish_en") or ex.get("caption_zh") or ""
+    q = ex.get("caption_zh_polish_en")
 
     if PROMPT_WITH_IMAGE_IN_CONTENT:
         prompt = [
