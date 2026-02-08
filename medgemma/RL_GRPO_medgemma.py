@@ -17,7 +17,7 @@ from trl import GRPOConfig, GRPOTrainer
 # =========================
 # 0) Config
 # =========================
-DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
+DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
 BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
 
 CKPT = "/root/model/medgemma-1.5-4b-it"
@@ -26,14 +26,13 @@ OUTPUT_DIR = "/root/model/GRPO_medgemma4b"
 # TRAIN_SIZE = 3900
 # EVAL_SIZE = 100
 
-TRAIN_SIZE = 3900
+TRAIN_SIZE = 3773
 EVAL_SIZE = 100
 
 MODEL_TAG = "gemma1.5_4b_it"
 
-# If your TRL / model expects multimodal chat content that includes image inside prompt,
-# set this True. Otherwise keep False and let trainer/model pick image from dataset column.
-PROMPT_WITH_IMAGE_IN_CONTENT = False
+
+PROMPT_WITH_IMAGE_IN_CONTENT = True
 
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
@@ -340,7 +339,7 @@ def build_training_args():
             "attn_implementation": "eager",
         },
 
-        push_to_hub=False,                  # 训练稳定后再开，避免网络/权限干扰
+        push_to_hub=False,
     )
 
 
