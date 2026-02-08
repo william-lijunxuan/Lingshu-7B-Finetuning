@@ -312,14 +312,14 @@ def build_training_args():
 
         learning_rate=5e-6,
 
-        per_device_train_batch_size=1,      # 先保持 1，稳定后再尝试 2
-        gradient_accumulation_steps=8,      # DDP 后等效 batch 会变大
-        num_generations=2,                  # 建议先 2，4 很吃显存/速度
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=8,
+        num_generations=4,
 
         max_prompt_length=128,
-        max_completion_length=256,          # 如果还想更快：256/384
+        max_completion_length=256,
 
-        max_steps=1700,
+        max_steps=5,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
