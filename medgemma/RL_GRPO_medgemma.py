@@ -26,8 +26,8 @@ OUTPUT_DIR = "/root/model/GRPO_medgemma4b"
 # TRAIN_SIZE = 3900
 # EVAL_SIZE = 100
 
-TRAIN_SIZE = 100
-EVAL_SIZE = 30
+TRAIN_SIZE = 3900
+EVAL_SIZE = 100
 
 MODEL_TAG = "gemma1.5_4b_it"
 
@@ -319,7 +319,7 @@ def build_training_args():
         max_prompt_length=128,
         max_completion_length=256,
 
-        max_steps=5,
+        max_steps=1700,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
