@@ -11,3 +11,6 @@ __pycache__/
 *.pytest_cache/
 *.egg-info/
 .cache/
+/qwenvl/eval/eval_results/**
+/qwenvl/eval/log/**
+/qwenvl/scripts/output30K.zip
