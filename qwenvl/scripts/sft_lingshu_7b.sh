@@ -21,7 +21,7 @@ grad_accum_steps=4
 entry_file=/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
 
 # Dataset configuration (replace with public dataset names)
-datasets=derm1m
+datasets=/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl
 
 # Output configuration
 run_name="lingshu-7b-baseline"

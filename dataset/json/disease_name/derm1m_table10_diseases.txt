@@ -1,0 +1,390 @@
+abscess
+acanthosis nigricans
+acne
+acne keloidalis nuchae
+acne urticata
+acne vulgaris
+acquired autoimmune bullous disease herpes gestationis
+acrokeratosis verruciformis
+actinic granuloma
+actinic solar damage (actinic keratosis)
+actinic solar damage (cutis rhomboidalis nuchae)
+actinic solar damage (pigmentation)
+actinic solar damage (solar elastosis)
+actinic solar damage (solar purpura)
+actinic solar damage (telangiectasia)
+acute and chronic dermatitis
+acute constitutional eczema
+acute dermatitis
+acute dermatitis, nos
+acute generalized exanthematous pustulosis
+acute vesicular dermatitis
+adnexal neoplasm
+ageing skin
+allergic contact dermatitis
+allergic reaction
+alopecia
+alopecia areata
+alopecia mucinosa
+amyloidosis
+angiofibroma
+angiokeratoma
+angioma
+angular cheilitis
+animal bite – wound
+annular erythema
+apocrine hydrocystoma
+arsenical keratosis
+atopic dermatitis
+atopic winter feet
+autoimmune dermatitis
+basal cell carcinoma
+beau’s lines
+becker nevus
+behcets disease
+benign keratosis
+blister
+blue nevus
+bowen’s disease
+bullous disease
+bullous pemphigoid
+burn of forearm
+burn of skin
+café au lait macule
+calcinosis cutis
+callus
+campbell de morgan spots
+candida intertrigo
+candidiasis
+cellulitis
+central centrifugal cicatricial alopecia
+cheilitis
+chilblain
+childhood bullous pemphigoid
+cholestasis of pregnancy
+chondrodermatitis nodularis helicis
+chronic actinic dermatitis
+chronic dermatitis, nos
+clubbing of fingers
+compound nevus
+condyloma
+condyloma acuminatum
+confluent and reticulated papillomatosis
+congenital nevus
+contact dermatitis
+contact dermatitis caused by rhus diversiloba
+contact dermatitis, nos
+contact purpura
+crowe’s sign
+cutaneous b-cell lymphoma
+cutaneous horn
+cutaneous larva migrans
+cutaneous leishmaniasis
+cutaneous lupus
+cutaneous sarcoidosis
+cutaneous t-cell lymphoma
+cyst
+darier-white disease
+dariers disease
+deep fungal infection
+degos disease
+dermatitis
+dermatitis herpetiformis
+dermatofibroma
+dermatosis papulosa nigra
+desquamation
+diffuse xanthoma
+digital fibroma
+dilated pore of winer
+discoid eczema
+disseminated actinic porokeratosis
+drug eruption
+drug eruptions and reactions
+drug-induced pigmentary changes
+dry skin
+dyshidrosiform eczema
+dysplastic nevus
+ecthyma
+ecthyma gangrenosum
+eczema
+eczema herpeticum
+ehlers-danlos syndrome
+elephantiasis nostras
+epidermal nevus
+epidermoid cyst
+epidermolysis bullosa
+erosion of skin
+erosive pustular dermatosis of the scalp
+eruptive odontogenic cyst
+eruptive xanthoma
+erythema ab igne
+erythema annulare centrifugum
+erythema craquele
+erythema dyschromicum perstans
+erythema elevatum diutinum
+erythema gyratum repens
+erythema migrans
+erythema multiforme
+erythema nodosum
+exfoliative dermatitis
+exfoliative erythroderma
+factitial dermatitis
+favre racouchot
+fibroma molle
+fixed drug eruption
+fixed eruptions
+flat wart
+flushing
+follicular mucinosis
+folliculitis
+foot ulcer
+foreign body reaction of the skin
+fox-fordyce disease
+freckle
+fungal dermatitis
+fungal dermatosis
+furuncle
+geographic tongue
+granulation tissue
+granuloma annulare
+granuloma faciale
+grover’s disease
+guttate psoriasis
+hailey-hailey disease
+halo nevus
+hand eczema
+hand foot and mouth disease
+hemangioma
+hematoma of skin
+hemosiderin pigmentation of lower limb due to varicose veins
+hemosiderin pigmentation of skin due to venous insufficiency
+herpes simplex virus
+herpes zoster
+hidradenitis suppurativa
+histiocytosis of skin
+hormonal acne
+hyperkeratosis palmaris et plantaris
+hyperpigmentation
+hypersensitivity
+hypertrichosis
+hypertrophic scar
+ichthyosis
+idiopathic guttate hypomelanosis
+impetigo
+infantile atopic dermatitis
+infected eczema
+inflammatory dermatosis
+insect bite
+intertrigo
+inverse psoriasis
+irritant contact dermatitis
+irritated seborrheic keratosis
+junction nevus
+juvenile plantar dermatosis
+juvenile xanthogranuloma
+kaposi sarcoma
+kaposi’s sarcoma of skin
+keloid
+keratoacanthoma
+keratoderma
+keratolysis exfoliativa of wende
+keratosis
+keratosis pilaris
+keratosis pilaris rubra faciei
+kerion
+knuckle pads
+koilonychia
+langerhans cell histiocytosis
+leg veins
+lentigo
+lentigo maligna
+lentigo maligna melanoma
+leukocytoclastic vasculitis
+leukonychia
+lichen amyloidosis
+lichen nitidus
+lichen planus
+lichen sclerosus et atrophicus
+lichen simplex chronicus
+lichen spinulosus
+lichen striatus
+lipoma
+livedo reticularis
+local infection of wound
+localized cutaneous vasculitis
+localized skin infection
+lupus erythematosus
+lyme disease
+lymphangioma
+lymphocytic infiltrate of jessner
+majocchi granuloma
+median nail dystrophy
+medication-induced cutaneous pigmentation
+melanin pigmentation due to exogenous substance
+melanocytic nevus
+melanoma
+melasma
+merkel cell carcinoma
+metastatic carcinoma
+milia
+miliaria
+moles
+molluscum contagiosum
+morphea
+mucinosis
+mucocele
+mucosal melanotic macule
+muzzle rash
+mycosis fungoides
+myxoid cyst
+naevus comedonicus
+nail disease
+nail dystrophy
+nail psoriasis
+necrobiosis lipoidica
+nematode infection
+neurodermatitis
+neurofibroma
+neurofibromatosis
+neutrophilic dermatoses
+nevus
+nevus depigmentosus
+nevus sebaceous of jadassohn
+nevus spilus
+no definitive diagnosis
+nummular eczema
+onycholysis
+onychomycosis
+onychoschizia
+organoid nevus
+ota nevus
+others
+palmar-plantar pustulosis
+palpable migrating erythema
+papular dermatoses of pregnancy
+parapsoriasis
+paronychia
+parvovirus b19 infection
+pemphigus vulgaris
+phototherapy
+phytophotodermatitis
+pigmentation of pregnancy
+pigmented progressive purpuric dermatosis
+pigmented purpuric eruption
+pilar cyst
+pincer nail deformity
+pityriasis alba
+pityriasis lichenoides
+pityriasis lichenoides chronica
+pityriasis lichenoides et varioliformis acuta
+pityriasis rosea
+pityriasis rubra pilaris
+pityrosporum folliculitis
+poikiloderma
+poikiloderma of civatte
+poisoning by nematocyst
+polymorphic eruption of pregnancy
+polymorphous light eruption
+porokeratosis
+porokeratosis of mibelli
+poroma
+porphyria
+port-wine stain
+post-inflammatory hyperpigmentation
+post-inflammatory hypopigmentation
+post-inflammatory pigmentation
+pressure ulcer
+prurigo
+prurigo gravidarum
+prurigo nodularis
+prurigo of pregnancy
+prurigo pigmentosa
+pruritic urticarial papules and plaques of pregnancy
+pruritus ani
+pseudo-glucagonoma syndrome
+pseudofolliculitis barbae
+pseudorhinophyma
+psoriasis
+pustular psoriasis
+pyoderma
+pyoderma gangrenosum
+pyogenic granuloma
+radiodermatitis
+raynaud phenomenon
+red stretch marks
+relapsing polychondritis
+rheumatoid nodule
+rhinophyma
+riehl melanosis
+rosacea
+sand-worm eruption
+sarcoidosis
+scabies
+scalp psoriasis
+scar
+scleroderma
+scleromyxedema
+sebaceous hyperplasia
+seborrheic keratoses
+sixth disease
+skin and soft-tissue atypical mycobacterial infection
+skin cancer
+skin diseases caused by warts
+skin infection
+skin lesion in drug addict
+skin tag
+spider veins
+squamous cell carcinoma
+staphylococcal scalded skin syndrome
+stasis dermatitis
+stasis edema
+stasis ulcer
+steatocystoma multiplex
+steroid acne
+steroid use abuse misuse dermatitis
+stevens-johnson syndrome
+strawberry birthmarks
+striae
+subungual hematoma
+sun spots
+sunburn
+superficial gyrate erythema
+superficial spreading melanoma ssm
+superficial wound of body region
+sweet syndrome
+sweet’s syndrome
+syphilis
+syringoma
+systemic disease
+telangiectasia macularis eruptiva perstans
+tick bite
+tinea
+tinea corporis
+tinea cruris
+tinea manus
+tinea pedis
+tinea versicolor
+transient acantholytic dermatosis
+traumatic blister
+traumatic ulcer
+tuberous sclerosis
+tungiasis
+ulcer
+unilateral laterothoracic exanthem
+urticaria
+urticaria pigmentosa
+urticarial vasculitis
+varicella
+varicose veins of lower extremity
+vascular
+vasculitis
+venous lake
+verruca vulgaris
+viral exanthem
+viral exanthems roseola
+vitiligo
+wound abrasion
+xanthelasma
+xeroderma pigmentosum
+xerosis
+xerotic eczema

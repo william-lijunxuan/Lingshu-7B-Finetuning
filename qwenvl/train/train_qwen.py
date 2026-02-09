@@ -184,6 +184,7 @@ def train(attn_implementation="flash_attention_2"):
             task_type=TaskType.CAUSAL_LM,
         )
         model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
     else:
         set_model(model_args, model)
 
