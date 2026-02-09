@@ -5,10 +5,10 @@ import unicodedata
 from pathlib import Path
 import pandas as pd
 
-IN_PATH = r"/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_structured_4ok_multiRegion.xlsx".replace("\\",
+IN_PATH = r"/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_v2_pretrain_min20_structured_4ok_multiRegion.xlsx".replace("\\",
                                                                                                                 "/")
 OUT_PATH = os.path.join(os.path.dirname(IN_PATH), "Derm1M_train_qwen_prompt_eval_964.jsonl")
-disease_name = r"/root/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt".replace("\\", "/")
+disease_name = r"/mnt/d/skinalor/model/Lingshu-7B-Finetuning/dataset/json/disease_name/derm1m_table10_diseases.txt".replace("\\", "/")
 
 COUNTS_CSV = os.path.join(os.path.dirname(OUT_PATH), "Derm1M_filtered_disease_counts.csv")
 

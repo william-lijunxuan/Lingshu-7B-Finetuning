@@ -6,8 +6,8 @@ import math
 import numpy as np
 import pandas as pd
 
-IN_CSV = "/root/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
-OUT_CSV = "/root/dataset/skin/Derm1M/Derm1M_balanced_10k.csv"
+IN_CSV = "/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_v2_pretrain.csv"
+OUT_CSV = "/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_balanced_10k.csv"
 TARGET_TOTAL = 10_000
 RANDOM_SEED = 42
 
