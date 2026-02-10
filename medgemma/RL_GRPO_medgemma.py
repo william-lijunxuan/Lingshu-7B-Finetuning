@@ -141,10 +141,10 @@ def build_dataset():
 
     ds = ds.cast_column("image", datasets.Image())
 
-    ds = build_dataset()
-    print(ds[0].keys())
-    print(type(ds[0]["image"]))
-    print(ds[0]["prompt"][1]["content"][0])
+    # ds = build_dataset()
+    # print(ds[0].keys())
+    # print(type(ds[0]["image"]))
+    # print(ds[0]["prompt"][1]["content"][0])
     return ds
 
 
