@@ -310,7 +310,7 @@ def build_training_args():
         max_prompt_length=128,
         max_completion_length=256,
 
-        max_steps=10,
+        max_steps=1700,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
