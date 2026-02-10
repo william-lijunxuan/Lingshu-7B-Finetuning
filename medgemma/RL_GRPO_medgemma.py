@@ -23,11 +23,11 @@ BASE_IMG_DIR = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 CKPT = "/mnt/d/skinalor/model/medgemma-1.5-4b-it"
 OUTPUT_DIR = "/mnt/d/skinalor/model/GRPO_medgemma4b"
 
-TRAIN_SIZE = 100
-EVAL_SIZE = 50
+# TRAIN_SIZE = 100
+# EVAL_SIZE = 50
 
-# TRAIN_SIZE = 3773
-# EVAL_SIZE = 100
+TRAIN_SIZE = 3773
+EVAL_SIZE = 100
 
 MODEL_TAG = "gemma1.5_4b_it"
 
