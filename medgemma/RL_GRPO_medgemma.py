@@ -308,7 +308,7 @@ def build_training_args():
         num_generations=4,
 
         max_prompt_length=128,
-        max_completion_length=256,
+        max_completion_length=128,
 
         max_steps=1700,
         logging_steps=20,
@@ -320,7 +320,7 @@ def build_training_args():
 
         use_vllm=True,
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.45,   # 0.30
+        vllm_gpu_memory_utilization=0.5555,   # 0.30
         bf16=True,
 
         gradient_checkpointing=True,
@@ -328,7 +328,7 @@ def build_training_args():
 
         model_init_kwargs={
             "dtype": torch.bfloat16,
-            "attn_implementation": "eager",
+            "attn_implementation": "flash_attention_2",
         },
 
         push_to_hub=False,
@@ -338,9 +338,9 @@ def build_training_args():
 def build_lora_config():
     return LoraConfig(
         task_type="CAUSAL_LM",
-        r=64,
-        lora_alpha=64,
-        target_modules="all-linear",
+        r=16,
+        lora_alpha=32,
+        target_modules=["q_proj", "v_proj"],
     )
 
 
