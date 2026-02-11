@@ -328,7 +328,7 @@ def build_training_args():
 
         model_init_kwargs={
             "dtype": torch.bfloat16,
-            "attn_implementation": "flash_attention_2",
+            "attn_implementation": "sdpa",
         },
 
         push_to_hub=False,
