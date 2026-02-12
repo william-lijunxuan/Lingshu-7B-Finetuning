@@ -303,7 +303,9 @@ def build_training_args():
 
         model_init_kwargs={
             "dtype": torch.bfloat16,
-            "attn_implementation": "eager",
+            # "attn_implementation": "eager",
+            "attn_implementation": "flash_attention_2",
+            "trust_remote_code": True,
         },
 
         push_to_hub=False,
