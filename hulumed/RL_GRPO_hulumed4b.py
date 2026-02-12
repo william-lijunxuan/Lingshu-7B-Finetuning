@@ -347,16 +347,19 @@ def run():
         torch_dtype=torch.bfloat16,
         device_map="auto",
         attn_implementation="flash_attention_2",
+        fix_mistral_regex=True,
     )
 
     processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
-    tokenizer = processor.tokenizer
+
+    if hasattr(processor, "tokenizer"):
+        processor.tokenizer = model
 
 
 
     trainer = GRPOTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=processor,
         reward_funcs=[correctness_reward_func],
         args=training_args,
         train_dataset=train_dataset,
