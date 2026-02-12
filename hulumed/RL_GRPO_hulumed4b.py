@@ -30,7 +30,6 @@ EVAL_SIZE = 2
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
 
-# Reduce image token pressure (best-effort; applied only if supported by processor)
 IMAGE_MIN_PIXELS = 224 * 224
 IMAGE_MAX_PIXELS = 336 * 336
 IMAGE_SHORTEST_EDGE = 336
@@ -104,9 +103,7 @@ def to_prompt(ex):
     q = ex.get("caption_zh_polish_en")
     q = "null" if q is None else str(q)
 
-    # Important:
-    # - Keep prompt content text-only.
-    # - Feed the image only through the dataset "image" column (datasets.Image()).
+    # Keep prompt text-only for stability; image comes from dataset "image" column.
     prompt = [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": USER_TEMPLATE.format(q=q)},
@@ -129,8 +126,6 @@ def build_dataset():
     ds = ds.cast_column("image_path", datasets.Value("string"))
 
     ds = ds.map(to_prompt, remove_columns=ds.column_names)
-
-    # This makes ds[i]["image"] a PIL image at runtime
     ds = ds.cast_column("image", datasets.Image())
     return ds
 
@@ -145,11 +140,7 @@ def extract_user_text(prompt_item) -> str:
     if not user_msgs:
         return ""
     content = user_msgs[-1].get("content", "")
-
-    if isinstance(content, str):
-        return content
-
-    return ""
+    return content if isinstance(content, str) else ""
 
 
 def extract_completion_text(comp) -> str:
@@ -202,10 +193,7 @@ def correctness_reward_func(
     rewards = []
     step = getattr(trainer_state, "global_step", None)
 
-    if isinstance(image_name, list):
-        names = image_name
-    else:
-        names = [None] * len(completions)
+    names = image_name if isinstance(image_name, list) else [None] * len(completions)
 
     for i, (p, c, gt, nm) in enumerate(zip(prompts, completions, answer, names)):
         q_text = extract_user_text(p)
@@ -229,7 +217,6 @@ def correctness_reward_func(
         if is_rank0():
             q_show = (q_text[:MAX_Q_CHARS] + "...") if len(q_text) > MAX_Q_CHARS else q_text
             pred_show = (pred_raw[:MAX_A_CHARS] + "...") if len(pred_raw) > MAX_A_CHARS else pred_raw
-
             logger.info(
                 "step=%s | idx=%d | image=%s | reward=%.3f | gt='%s' | pred_raw='%s' | q='%s'",
                 str(step),
@@ -257,8 +244,6 @@ def build_training_args():
         gradient_accumulation_steps=8,
         num_generations=4,
 
-        # Note: max_prompt_length is deprecated in TRL; keep small to reduce pressure,
-        # but also rely on image resize and sanity checks.
         max_prompt_length=256,
         max_completion_length=64,
 
@@ -270,20 +255,11 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        # Disable vLLM for stability (your vLLM version is not supported by TRL)
-        use_vllm=False,
-
+        use_vllm=False,  # keep off for stability
         bf16=True,
+
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-
-        # Will be ignored because we pass an instantiated model into GRPOTrainer,
-        # but keep it for clarity.
-        model_init_kwargs={
-            "dtype": torch.bfloat16,
-            "attn_implementation": "eager",
-            "trust_remote_code": True,
-        },
 
         push_to_hub=False,
     )
@@ -305,8 +281,6 @@ def try_configure_image_processor(processor):
     ip = getattr(processor, "image_processor", None)
     if ip is None:
         return
-
-    # Best-effort: set only if attributes exist
     if hasattr(ip, "do_resize"):
         ip.do_resize = True
     if hasattr(ip, "max_pixels"):
@@ -327,11 +301,10 @@ def try_configure_image_processor(processor):
 
 def enforce_token_ids(model, tokenizer):
     if tokenizer.eos_token_id is None:
-        raise ValueError("tokenizer.eos_token_id is None; generation cannot be stabilized.")
+        raise ValueError("tokenizer.eos_token_id is None; cannot stabilize generation.")
 
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
-
     if tokenizer.bos_token_id is None:
         tokenizer.bos_token_id = tokenizer.eos_token_id
 
@@ -344,32 +317,36 @@ def enforce_token_ids(model, tokenizer):
     gen.pad_token_id = tokenizer.pad_token_id
     gen.bos_token_id = tokenizer.bos_token_id
 
-    # Avoid zero-length completions
     gen.min_new_tokens = 1
     gen.max_new_tokens = 64
     gen.do_sample = True
 
 
 def sanity_check_encoding(model, processor, tokenizer, sample):
-    # Check the real token length of the prompt after template + tokenization.
-    # If this fails, processor is not compatible with apply_chat_template.
-    try:
-        enc = processor.apply_chat_template(
-            sample["prompt"],
-            add_generation_prompt=True,
-            tokenize=True,
-            return_tensors="pt",
-        )
-        prompt_len = enc["input_ids"].shape[-1]
-    except Exception as e:
-        raise RuntimeError(f"processor.apply_chat_template failed: {repr(e)}")
+    # Hulu-Med processor may return Tensor instead of dict; support both.
+    enc = processor.apply_chat_template(
+        sample["prompt"],
+        add_generation_prompt=True,
+        tokenize=True,
+        return_tensors="pt",
+    )
 
-    # Model max context (best-effort)
+    if isinstance(enc, torch.Tensor):
+        prompt_len = enc.shape[-1]
+    elif isinstance(enc, dict):
+        input_ids = enc.get("input_ids")
+        if isinstance(input_ids, torch.Tensor):
+            prompt_len = input_ids.shape[-1]
+        else:
+            raise RuntimeError(f"Unexpected enc['input_ids'] type: {type(input_ids)}")
+    else:
+        raise RuntimeError(f"Unexpected encoding return type: {type(enc)}")
+
     max_ctx = getattr(model.config, "max_position_embeddings", None)
     if max_ctx is None:
         max_ctx = getattr(tokenizer, "model_max_length", None)
 
-    logger.info("Sanity check: prompt_input_ids_len=%s | model_max_ctx=%s", str(prompt_len), str(max_ctx))
+    logger.info("Sanity check: prompt_len=%s | model_max_ctx=%s", str(prompt_len), str(max_ctx))
     return prompt_len, max_ctx
 
 
@@ -397,14 +374,13 @@ def run():
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH,
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,  # use dtype to avoid torch_dtype deprecation warning
         device_map="auto",
         attn_implementation="eager",
     )
 
     logger.info("Loading processor/tokenizer: %s", MODEL_PATH)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, trust_remote_code=True)
-
     tokenizer = AutoTokenizer.from_pretrained(
         MODEL_PATH,
         trust_remote_code=True,
@@ -417,7 +393,7 @@ def run():
     try_configure_image_processor(processor)
     enforce_token_ids(model, tokenizer)
 
-    # Optional but useful: fail fast if processor/chat template is incompatible
+    # Fail-fast check: now compatible with Tensor/dict return types
     _ = sanity_check_encoding(model, processor, tokenizer, train_dataset[0])
 
     trainer = GRPOTrainer(
