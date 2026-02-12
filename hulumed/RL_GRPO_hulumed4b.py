@@ -11,6 +11,22 @@ import torch
 import datasets
 from datasets import Dataset
 from peft import LoraConfig
+
+def patch_vllm_trust_remote_code():
+    import vllm.entrypoints.llm as vllm_llm_mod
+
+    OriginalLLM = vllm_llm_mod.LLM
+
+    class PatchedLLM(OriginalLLM):
+        def __init__(self, *args, **kwargs):
+            kwargs.setdefault("trust_remote_code", True)
+            super().__init__(*args, **kwargs)
+
+    vllm_llm_mod.LLM = PatchedLLM
+
+
+patch_vllm_trust_remote_code()
+
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
 
