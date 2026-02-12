@@ -308,7 +308,7 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        use_vllm=True,
+        use_vllm=False,
         vllm_mode="colocate",
         vllm_gpu_memory_utilization=0.45,   # 0.30
         bf16=True,
