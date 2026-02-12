@@ -20,8 +20,8 @@ from trl import GRPOConfig, GRPOTrainer
 DATA_PATH = "/home/william/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
 BASE_IMG_DIR = "/home/william/dataset/skin/SkinCAP/skincap"
 
-CKPT = "/home/william/model/medgemma-1.5-4b-it"
-OUTPUT_DIR = "/home/william/model/GRPO_medgemma4b"
+CKPT = "/home/william/model/Hulu-Med-4B"
+OUTPUT_DIR = "/home/william/model/GRPO_hulumed4b"
 
 # TRAIN_SIZE = 3900
 # EVAL_SIZE = 100
@@ -29,10 +29,8 @@ OUTPUT_DIR = "/home/william/model/GRPO_medgemma4b"
 TRAIN_SIZE = 4
 EVAL_SIZE = 2
 
-MODEL_TAG = "gemma1.5_4b_it"
+MODEL_TAG = "GRPO_hulumed4b"
 
-# If your TRL / model expects multimodal chat content that includes image inside prompt,
-# set this True. Otherwise keep False and let trainer/model pick image from dataset column.
 PROMPT_WITH_IMAGE_IN_CONTENT = False
 
 MAX_Q_CHARS = 800
@@ -87,7 +85,7 @@ SYSTEM = "SYSTEM INSTRUCTION: think silently if needed."
 USER_TEMPLATE = (
     "You are given a clinical image and a question.\n"
     "Return ONLY the disease name in English. No extra words.\n"
-    "Image description: {q}\n"
+    "Question: {q}\n"
 )
 
 
@@ -105,27 +103,35 @@ def add_image_path(ex):
 
 
 def to_prompt(ex):
-    q = ex["caption_zh_polish_en"]
-    if q is None:
-        q="null"
-    q = str(q)
+    q = ex.get("caption_zh_polish_en") or ex.get("caption_zh") or ""
+
+    if PROMPT_WITH_IMAGE_IN_CONTENT:
+        prompt = [
+            {"role": "system", "content": SYSTEM},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": ex["image_path"]},
+                    {"type": "text", "text": USER_TEMPLATE.format(q=q)},
+                ],
+            },
+        ]
+        return {
+            "prompt": prompt,
+            "answer": ex["answer"],
+            "image_name": ex["image_name"],
+            "question_type": ex.get("question_type", ""),
+        }
 
     prompt = [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": ex["image_path"]},
-                {"type": "text", "text": USER_TEMPLATE.format(q=q)},
-            ],
-        },
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": USER_TEMPLATE.format(q=q)},
     ]
-
     return {
         "prompt": prompt,
-        "answer": str(ex.get("answer", "")),
-        "image_name": str(ex.get("image_name", "")),
-        "question_type": str(ex.get("question_type", "")),
+        "answer": ex["answer"],
+        "image_name": ex["image_name"],
+        "question_type": ex.get("question_type", ""),
         "image": ex["image_path"],
     }
 
@@ -135,16 +141,17 @@ def build_dataset():
     ds = Dataset.from_list(data)
 
     ds = ds.map(add_image_path)
-    ds = ds.cast_column("image_path", datasets.Value("string"))
 
-    ds = ds.map(to_prompt, remove_columns=ds.column_names)
+    if not PROMPT_WITH_IMAGE_IN_CONTENT:
+        ds = ds.cast_column("image_path", datasets.Value("string"))
+        ds = ds.map(to_prompt)
+        ds = ds.cast_column("image", datasets.Image())
+        keep_cols = ["prompt", "answer", "image", "image_name", "question_type"]
+    else:
+        ds = ds.map(to_prompt)
+        keep_cols = ["prompt", "answer", "image_name", "question_type"]
 
-    ds = ds.cast_column("image", datasets.Image())
-
-    # ds = build_dataset()
-    # print(ds[0].keys())
-    # print(type(ds[0]["image"]))
-    # print(ds[0]["prompt"][1]["content"][0])
+    ds = ds.remove_columns([c for c in ds.column_names if c not in keep_cols])
     return ds
 
 
@@ -271,38 +278,30 @@ def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
         eval_on_start=False,
-
         learning_rate=5e-6,
-
         per_device_train_batch_size=1,
-        gradient_accumulation_steps=8,
-        num_generations=4,
-
-        max_prompt_length=128,
-        max_completion_length=256,
-
+        gradient_accumulation_steps=4,
+        num_generations=1,
+        max_prompt_length=256,
+        max_completion_length=512,
         max_steps=1700,
         logging_steps=20,
         save_steps=100,
         eval_strategy="steps",
-        eval_steps=200,
-
+        eval_steps=100,
         report_to="tensorboard",
-
-        use_vllm=True,
+        use_vllm=False,
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.45,   # 0.30
+        vllm_gpu_memory_utilization=0.30,
         bf16=True,
-
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-
         model_init_kwargs={
+            "device_map": "auto",
             "dtype": torch.bfloat16,
             "attn_implementation": "eager",
         },
-
-        push_to_hub=False,
+        push_to_hub=True,
     )
 
 
