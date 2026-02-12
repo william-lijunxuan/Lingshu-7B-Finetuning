@@ -334,6 +334,7 @@ def build_training_args():
         model_init_kwargs={
             "dtype": torch.bfloat16,
             "attn_implementation": "eager",
+            "trust_remote_code":True,
         },
 
         push_to_hub=False,
@@ -371,7 +372,7 @@ def run():
     lora_config = build_lora_config()
 
     trainer = GRPOTrainer(
-        model=CKPT,
+        model=model_path,
         reward_funcs=[correctness_reward_func],
         args=training_args,
         train_dataset=train_dataset,
