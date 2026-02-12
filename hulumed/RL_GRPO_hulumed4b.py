@@ -323,7 +323,7 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        use_vllm=True,
+        use_vllm=False,
         vllm_mode="colocate",
         vllm_gpu_memory_utilization=0.45,   # 0.30
         bf16=True,
@@ -370,9 +370,28 @@ def run():
 
     training_args = build_training_args()
     lora_config = build_lora_config()
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+        attn_implementation="eager",
+    )
+
+    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+
+    if hasattr(processor, "tokenizer"):
+        processor.tokenizer = tokenizer
+
+    if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    if getattr(model.config, "pad_token_id", None) is None:
+        model.config.pad_token_id = tokenizer.pad_token_id
 
     trainer = GRPOTrainer(
-        model=model_path,
+        model=model,
+        processing_class=processor,
         reward_funcs=[correctness_reward_func],
         args=training_args,
         train_dataset=train_dataset,
