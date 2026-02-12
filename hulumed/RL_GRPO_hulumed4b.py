@@ -363,6 +363,19 @@ def run():
     if hasattr(processor, "tokenizer"):
         processor.tokenizer = tokenizer
 
+    sample = train_dataset[0]
+    inputs = processor.apply_chat_template(
+        sample["prompt"],
+        add_generation_prompt=True,
+        tokenize=True,
+        return_tensors="pt"
+    )
+
+    input_ids = inputs["input_ids"]
+    print("input_ids_len:", input_ids.shape[-1])
+
+    max_ctx = getattr(model.config, "max_position_embeddings", None) or getattr(tokenizer, "model_max_length", None)
+    print("model_max_ctx:", max_ctx)
 
     trainer = GRPOTrainer(
         model=model,
