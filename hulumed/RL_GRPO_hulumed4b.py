@@ -12,7 +12,7 @@ import datasets
 from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
-
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 # =========================
 # 0) Config
@@ -20,7 +20,7 @@ from trl import GRPOConfig, GRPOTrainer
 DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
 BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
 
-CKPT = "/root/model/Hulu-Med-4B"
+model_path = "/root/model/Hulu-Med-4B"
 OUTPUT_DIR = "/root/model/GRPO_hulumed4b"
 
 # TRAIN_SIZE = 3900
@@ -341,9 +341,22 @@ def run():
 
     training_args = build_training_args()
     lora_config = build_lora_config()
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+        attn_implementation="flash_attention_2",
+    )
+
+    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer = processor.tokenizer
+
+
 
     trainer = GRPOTrainer(
-        model=CKPT,
+        model=model,
+        tokenizer=tokenizer,
         reward_funcs=[correctness_reward_func],
         args=training_args,
         train_dataset=train_dataset,
