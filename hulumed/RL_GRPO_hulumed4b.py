@@ -12,7 +12,7 @@ import datasets
 from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
-from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 # =========================
 # 0) Config
@@ -20,27 +20,20 @@ from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
 DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
 BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
 
-model_path = "/root/model/Hulu-Med-4B"
+MODEL_PATH = "/root/model/Hulu-Med-4B"
 OUTPUT_DIR = "/root/model/GRPO_hulumed4b"
-
-# TRAIN_SIZE = 3900
-# EVAL_SIZE = 100
+MODEL_TAG = "GRPO_hulumed4b"
 
 TRAIN_SIZE = 4
 EVAL_SIZE = 2
 
-
-# TRAIN_SIZE = 3773
-# EVAL_SIZE = 100
-
-MODEL_TAG = "GRPO_hulumed4b"
-
-
-
-
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
 
+# Reduce image token pressure (best-effort; applied only if supported by processor)
+IMAGE_MIN_PIXELS = 224 * 224
+IMAGE_MAX_PIXELS = 336 * 336
+IMAGE_SHORTEST_EDGE = 336
 
 # =========================
 # 1) Logging
@@ -108,20 +101,15 @@ def add_image_path(ex):
 
 
 def to_prompt(ex):
-    q = ex["caption_zh_polish_en"]
-    if q is None:
-        q="null"
-    q = str(q)
+    q = ex.get("caption_zh_polish_en")
+    q = "null" if q is None else str(q)
 
+    # Important:
+    # - Keep prompt content text-only.
+    # - Feed the image only through the dataset "image" column (datasets.Image()).
     prompt = [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": ex["image_path"]},
-                {"type": "text", "text": USER_TEMPLATE.format(q=q)},
-            ],
-        },
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": USER_TEMPLATE.format(q=q)},
     ]
 
     return {
@@ -133,8 +121,6 @@ def to_prompt(ex):
     }
 
 
-
-
 def build_dataset():
     data = load_json_list(DATA_PATH)
     ds = Dataset.from_list(data)
@@ -144,12 +130,8 @@ def build_dataset():
 
     ds = ds.map(to_prompt, remove_columns=ds.column_names)
 
+    # This makes ds[i]["image"] a PIL image at runtime
     ds = ds.cast_column("image", datasets.Image())
-
-    # ds = build_dataset()
-    # print(ds[0].keys())
-    # print(type(ds[0]["image"]))
-    # print(ds[0]["prompt"][1]["content"][0])
     return ds
 
 
@@ -166,13 +148,6 @@ def extract_user_text(prompt_item) -> str:
 
     if isinstance(content, str):
         return content
-
-    if isinstance(content, list):
-        texts = []
-        for part in content:
-            if isinstance(part, dict) and part.get("type") == "text":
-                texts.append(part.get("text", ""))
-        return "\n".join([t for t in texts if t])
 
     return ""
 
@@ -272,48 +247,20 @@ def correctness_reward_func(
 # =========================
 # 4) Train config
 # =========================
-# def build_training_args():
-#     return GRPOConfig(
-#         output_dir=OUTPUT_DIR,
-#         eval_on_start=False,
-#         learning_rate=5e-6,
-#         per_device_train_batch_size=1,
-#         gradient_accumulation_steps=4,
-#         num_generations=4,
-#         max_prompt_length=256,
-#         max_completion_length=512,
-#         max_steps=1700,
-#         logging_steps=20,
-#         save_steps=100,
-#         eval_strategy="steps",
-#         eval_steps=100,
-#         report_to="tensorboard",
-#         use_vllm=False,
-#         vllm_mode="colocate",
-#         vllm_gpu_memory_utilization=0.30,
-#         bf16=True,
-#         gradient_checkpointing=True,
-#         gradient_checkpointing_kwargs={"use_reentrant": False},
-#         model_init_kwargs={
-#             # "device_map": "auto",
-#             "dtype": torch.bfloat16,
-#             "attn_implementation": "eager",
-#         },
-#         push_to_hub=True,
-#     )
 def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
         eval_on_start=False,
-
         learning_rate=5e-6,
 
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
         num_generations=4,
 
-        max_prompt_length=128,
-        max_completion_length=256,
+        # Note: max_prompt_length is deprecated in TRL; keep small to reduce pressure,
+        # but also rely on image resize and sanity checks.
+        max_prompt_length=256,
+        max_completion_length=64,
 
         max_steps=1700,
         logging_steps=20,
@@ -323,18 +270,19 @@ def build_training_args():
 
         report_to="tensorboard",
 
+        # Disable vLLM for stability (your vLLM version is not supported by TRL)
         use_vllm=False,
-        vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.45,   # 0.30
-        bf16=True,
 
+        bf16=True,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
 
+        # Will be ignored because we pass an instantiated model into GRPOTrainer,
+        # but keep it for clarity.
         model_init_kwargs={
             "dtype": torch.bfloat16,
             "attn_implementation": "eager",
-            "trust_remote_code":True,
+            "trust_remote_code": True,
         },
 
         push_to_hub=False,
@@ -351,7 +299,82 @@ def build_lora_config():
 
 
 # =========================
-# 5) Main
+# 5) Model / Processor setup
+# =========================
+def try_configure_image_processor(processor):
+    ip = getattr(processor, "image_processor", None)
+    if ip is None:
+        return
+
+    # Best-effort: set only if attributes exist
+    if hasattr(ip, "do_resize"):
+        ip.do_resize = True
+    if hasattr(ip, "max_pixels"):
+        ip.max_pixels = IMAGE_MAX_PIXELS
+    if hasattr(ip, "min_pixels"):
+        ip.min_pixels = IMAGE_MIN_PIXELS
+    if hasattr(ip, "size"):
+        try:
+            ip.size = {"shortest_edge": IMAGE_SHORTEST_EDGE}
+        except Exception:
+            pass
+    if hasattr(ip, "crop_size"):
+        try:
+            ip.crop_size = {"height": IMAGE_SHORTEST_EDGE, "width": IMAGE_SHORTEST_EDGE}
+        except Exception:
+            pass
+
+
+def enforce_token_ids(model, tokenizer):
+    if tokenizer.eos_token_id is None:
+        raise ValueError("tokenizer.eos_token_id is None; generation cannot be stabilized.")
+
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    if tokenizer.bos_token_id is None:
+        tokenizer.bos_token_id = tokenizer.eos_token_id
+
+    model.config.eos_token_id = tokenizer.eos_token_id
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.bos_token_id = tokenizer.bos_token_id
+
+    gen = model.generation_config
+    gen.eos_token_id = tokenizer.eos_token_id
+    gen.pad_token_id = tokenizer.pad_token_id
+    gen.bos_token_id = tokenizer.bos_token_id
+
+    # Avoid zero-length completions
+    gen.min_new_tokens = 1
+    gen.max_new_tokens = 64
+    gen.do_sample = True
+
+
+def sanity_check_encoding(model, processor, tokenizer, sample):
+    # Check the real token length of the prompt after template + tokenization.
+    # If this fails, processor is not compatible with apply_chat_template.
+    try:
+        enc = processor.apply_chat_template(
+            sample["prompt"],
+            add_generation_prompt=True,
+            tokenize=True,
+            return_tensors="pt",
+        )
+        prompt_len = enc["input_ids"].shape[-1]
+    except Exception as e:
+        raise RuntimeError(f"processor.apply_chat_template failed: {repr(e)}")
+
+    # Model max context (best-effort)
+    max_ctx = getattr(model.config, "max_position_embeddings", None)
+    if max_ctx is None:
+        max_ctx = getattr(tokenizer, "model_max_length", None)
+
+    logger.info("Sanity check: prompt_input_ids_len=%s | model_max_ctx=%s", str(prompt_len), str(max_ctx))
+    return prompt_len, max_ctx
+
+
+# =========================
+# 6) Main
 # =========================
 def run():
     logger.info("Loading dataset from: %s", DATA_PATH)
@@ -365,29 +388,37 @@ def run():
 
     train_dataset = ds.select(range(0, TRAIN_SIZE))
     eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
-
     logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
 
     training_args = build_training_args()
     lora_config = build_lora_config()
+
+    logger.info("Loading model: %s", MODEL_PATH)
     model = AutoModelForCausalLM.from_pretrained(
-        model_path,
+        MODEL_PATH,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
         device_map="auto",
         attn_implementation="eager",
     )
 
-    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    logger.info("Loading processor/tokenizer: %s", MODEL_PATH)
+    processor = AutoProcessor.from_pretrained(MODEL_PATH, trust_remote_code=True)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        MODEL_PATH,
+        trust_remote_code=True,
+        fix_mistral_regex=True,
+    )
 
     if hasattr(processor, "tokenizer"):
         processor.tokenizer = tokenizer
 
-    if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-    if getattr(model.config, "pad_token_id", None) is None:
-        model.config.pad_token_id = tokenizer.pad_token_id
+    try_configure_image_processor(processor)
+    enforce_token_ids(model, tokenizer)
+
+    # Optional but useful: fail fast if processor/chat template is incompatible
+    _ = sanity_check_encoding(model, processor, tokenizer, train_dataset[0])
 
     trainer = GRPOTrainer(
         model=model,
@@ -416,12 +447,10 @@ if __name__ == "__main__":
             logger.warning("Interrupted by user (KeyboardInterrupt). Log file: %s", log_path)
         raise
     except Exception as e:
-        # Always write full traceback to the log file
         if is_rank0():
             logger.error("Fatal error occurred. Log file: %s", log_path)
             logger.error("Exception: %s", repr(e))
             logger.error("Traceback:\n%s", traceback.format_exc())
         raise
     finally:
-        # Ensure all handlers flush to disk
         logging.shutdown()
