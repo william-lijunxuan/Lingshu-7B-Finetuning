@@ -12,7 +12,7 @@ import datasets
 from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
-from transformers import AutoModelForCausalLM, AutoProcessor
+from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
 
 # =========================
 # 0) Config
@@ -351,9 +351,19 @@ def run():
     )
 
     processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        fix_mistral_regex=True,
+    )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model.config.pad_token_id = tokenizer.pad_token_id
 
     if hasattr(processor, "tokenizer"):
-        processor.tokenizer = model
+        processor.tokenizer = tokenizer
 
 
 
