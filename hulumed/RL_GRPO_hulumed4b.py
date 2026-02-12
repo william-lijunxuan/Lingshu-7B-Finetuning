@@ -283,7 +283,7 @@ def build_training_args():
         gradient_accumulation_steps=8,
         num_generations=4,
 
-        max_prompt_length=128,
+        max_prompt_length=1024,
         max_completion_length=256,
 
         max_steps=1700,
