@@ -11,7 +11,6 @@ import torch
 import datasets
 from datasets import Dataset
 from peft import LoraConfig
-
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
 
@@ -35,6 +34,7 @@ EVAL_SIZE = 2
 # EVAL_SIZE = 100
 
 MODEL_TAG = "GRPO_hulumed4b"
+
 
 
 
@@ -272,6 +272,35 @@ def correctness_reward_func(
 # =========================
 # 4) Train config
 # =========================
+# def build_training_args():
+#     return GRPOConfig(
+#         output_dir=OUTPUT_DIR,
+#         eval_on_start=False,
+#         learning_rate=5e-6,
+#         per_device_train_batch_size=1,
+#         gradient_accumulation_steps=4,
+#         num_generations=4,
+#         max_prompt_length=256,
+#         max_completion_length=512,
+#         max_steps=1700,
+#         logging_steps=20,
+#         save_steps=100,
+#         eval_strategy="steps",
+#         eval_steps=100,
+#         report_to="tensorboard",
+#         use_vllm=False,
+#         vllm_mode="colocate",
+#         vllm_gpu_memory_utilization=0.30,
+#         bf16=True,
+#         gradient_checkpointing=True,
+#         gradient_checkpointing_kwargs={"use_reentrant": False},
+#         model_init_kwargs={
+#             # "device_map": "auto",
+#             "dtype": torch.bfloat16,
+#             "attn_implementation": "eager",
+#         },
+#         push_to_hub=True,
+#     )
 def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
@@ -283,7 +312,7 @@ def build_training_args():
         gradient_accumulation_steps=8,
         num_generations=4,
 
-        max_prompt_length=1024,
+        max_prompt_length=128,
         max_completion_length=256,
 
         max_steps=1700,
@@ -294,7 +323,7 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        use_vllm=False,
+        use_vllm=True,
         vllm_mode="colocate",
         vllm_gpu_memory_utilization=0.45,   # 0.30
         bf16=True,
@@ -304,9 +333,7 @@ def build_training_args():
 
         model_init_kwargs={
             "dtype": torch.bfloat16,
-            # "attn_implementation": "eager",
-            "attn_implementation": "flash_attention_2",
-            "trust_remote_code": True,
+            "attn_implementation": "eager",
         },
 
         push_to_hub=False,
@@ -342,44 +369,9 @@ def run():
 
     training_args = build_training_args()
     lora_config = build_lora_config()
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        attn_implementation="flash_attention_2",
-        fix_mistral_regex=True,
-    )
-
-
-    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
-        trust_remote_code=True,
-        fix_mistral_regex=True,
-    )
-
-    if hasattr(processor, "tokenizer"):
-        processor.tokenizer = tokenizer
-
-    sample = train_dataset[0]
-    inputs = processor.apply_chat_template(
-        sample["prompt"],
-        add_generation_prompt=True,
-        tokenize=True,
-        return_tensors="pt"
-    )
-
-    input_ids = inputs["input_ids"]
-    print("input_ids_len:", input_ids.shape[-1])
-
-    max_ctx = getattr(model.config, "max_position_embeddings", None) or getattr(tokenizer, "model_max_length", None)
-    print("model_max_ctx:", max_ctx)
 
     trainer = GRPOTrainer(
-        model=model,
-        processing_class=processor,
+        model=CKPT,
         reward_funcs=[correctness_reward_func],
         args=training_args,
         train_dataset=train_dataset,
