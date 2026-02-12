@@ -11,6 +11,20 @@ import torch
 import datasets
 from datasets import Dataset
 from peft import LoraConfig
+def patch_vllm_trust_remote_code():
+    import vllm.entrypoints.llm as vllm_llm_mod
+
+    OriginalLLM = vllm_llm_mod.LLM
+
+    class PatchedLLM(OriginalLLM):
+        def __init__(self, *args, **kwargs):
+            kwargs.setdefault("trust_remote_code", True)
+            super().__init__(*args, **kwargs)
+
+    vllm_llm_mod.LLM = PatchedLLM
+
+
+patch_vllm_trust_remote_code()
 
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoModelForCausalLM, AutoProcessor,AutoTokenizer
@@ -294,7 +308,7 @@ def build_training_args():
 
         report_to="tensorboard",
 
-        use_vllm=False,
+        use_vllm=True,
         vllm_mode="colocate",
         vllm_gpu_memory_utilization=0.45,   # 0.30
         bf16=True,
@@ -362,7 +376,14 @@ def run():
         tokenizer.pad_token = tokenizer.eos_token
 
     model.config.pad_token_id = tokenizer.pad_token_id
+    if tokenizer.bos_token_id is None:
+        tokenizer.bos_token_id = 1
+        tokenizer.bos_token = "<s>"
 
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.padding_side = "left"
     if hasattr(processor, "tokenizer"):
         processor.tokenizer = tokenizer
 
