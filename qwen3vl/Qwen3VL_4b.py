@@ -8,8 +8,6 @@ from datetime import datetime
 from difflib import SequenceMatcher
 
 import torch
-import datasets
-from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
@@ -92,45 +90,47 @@ def load_json_list(path: str):
     return obj
 
 
-def add_image_path(ex):
-    ex["image_path"] = os.path.join(BASE_IMG_DIR, ex["image_name"])
-    return ex
-
-
-def make_conversation(ex):
-    q = ex.get("caption_zh_polish_en")
-    q = "null" if q is None else str(q)
-
-    prompt = [
+def build_prompt_item(image_path: str, caption: str):
+    return [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": ex["image"]},  # PIL after cast_column
-                {"type": "text", "text": USER_TEMPLATE.format(q=q)},
+                {"type": "image", "image": image_path},
+                {"type": "text", "text": USER_TEMPLATE.format(q=caption)},
             ],
         },
     ]
-    return {
-        "prompt": prompt,
-        "answer": str(ex.get("answer", "")),
-        "image_name": str(ex.get("image_name", "")),
-        "question_type": str(ex.get("question_type", "")),
-    }
 
 
-def build_dataset():
+def build_datasets():
     data = load_json_list(DATA_PATH)
-    ds = Dataset.from_list(data)
 
-    ds = ds.map(add_image_path)
-    # Use datasets.Image for lazy decoding; it returns PIL when accessed
-    ds = ds.cast_column("image_path", datasets.Image())
-    # Standardize column name to "image" like the TRL notebook pattern
-    ds = ds.rename_column("image_path", "image")
+    need = TRAIN_SIZE + EVAL_SIZE
+    if len(data) < need:
+        raise ValueError(f"Dataset too small: {len(data)} < {need}")
 
-    ds = ds.map(make_conversation, remove_columns=ds.column_names)
-    return ds
+    def convert(ex):
+        image_name = str(ex.get("image_name", ""))
+        image_path = os.path.join(BASE_IMG_DIR, image_name)
+
+        cap = ex.get("caption_zh_polish_en")
+        cap = "null" if cap is None else str(cap)
+
+        return {
+            "prompt": build_prompt_item(image_path, cap),
+            "answer": str(ex.get("answer", "")),
+            "image_name": image_name,
+            "question_type": str(ex.get("question_type", "")),
+        }
+
+    train_raw = data[:TRAIN_SIZE]
+    eval_raw = data[TRAIN_SIZE:TRAIN_SIZE + EVAL_SIZE]
+
+    train_dataset = [convert(x) for x in train_raw]
+    eval_dataset = [convert(x) for x in eval_raw]
+
+    return train_dataset, eval_dataset
 
 
 # =========================
@@ -197,7 +197,6 @@ def format_reward(completions, **kwargs):
     rewards = []
     for c in completions:
         text = extract_completion_text(c).strip()
-        # Reward if it looks like a single short line (a disease name), no JSON, no extra sections
         if ("\n" in text) or ("{" in text) or ("}" in text) or (len(text) > 80) or (len(text) == 0):
             rewards.append(0.0)
         else:
@@ -295,19 +294,33 @@ def build_lora_config():
 def load_model_and_processor():
     processor = AutoProcessor.from_pretrained(CKPT, padding_side="left")
 
-    qconfig = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-    )
+    use_4bit = False
+    try:
+        import bitsandbytes  # noqa: F401
+        use_4bit = True
+    except Exception:
+        logger.warning("bitsandbytes not found; falling back to bf16 without 4-bit quantization.")
 
-    model = Qwen3VLForConditionalGeneration.from_pretrained(
-        CKPT,
-        device_map="auto",
-        quantization_config=qconfig,
-        torch_dtype=torch.float32,
-    )
+    if use_4bit:
+        qconfig = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+        model = Qwen3VLForConditionalGeneration.from_pretrained(
+            CKPT,
+            device_map="auto",
+            quantization_config=qconfig,
+            torch_dtype=torch.float32,
+        )
+    else:
+        model = Qwen3VLForConditionalGeneration.from_pretrained(
+            CKPT,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            attn_implementation="eager",
+        )
 
     return model, processor
 
@@ -326,17 +339,12 @@ def run():
         logger.info("model device=unknown (quantized / sharded)")
 
     logger.info("Loading dataset from: %s", DATA_PATH)
-    ds = build_dataset()
-    logger.info("Dataset size: %d", len(ds))
-    logger.info("Columns: %s", ds.column_names)
+    train_list, eval_list = build_datasets()
+    logger.info("Train size: %d | Eval size: %d", len(train_list), len(eval_list))
 
-    need = TRAIN_SIZE + EVAL_SIZE
-    if len(ds) < need:
-        raise ValueError(f"Dataset too small: {len(ds)} < {need}")
-
-    train_dataset = ds.select(range(0, TRAIN_SIZE))
-    eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
-    logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
+    from datasets import Dataset
+    train_dataset = Dataset.from_list(train_list)
+    eval_dataset = Dataset.from_list(eval_list)
 
     training_args = build_training_args()
     peft_config = build_lora_config()
