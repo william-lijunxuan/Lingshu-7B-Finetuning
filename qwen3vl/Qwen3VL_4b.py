@@ -70,7 +70,7 @@ model = Qwen3VLForConditionalGeneration.from_pretrained(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
+        bnb_4bit_compute_dtype=torch.bfloat16
     ),
 )
 
@@ -144,7 +144,8 @@ training_args = GRPOConfig(
     max_completion_length=256, # default: 256            # Max completion length produced during training
     num_generations=2, # 2, # default: 8                  # Number of generations produced during training for comparison
 
-    fp16=True,
+    fp16=False,
+    bf16=True,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
