@@ -55,12 +55,15 @@ def make_conversation(example):
             ],
         },
     ]
-    return {"prompt": prompt, "image": example["image_name"]}
-
+    return {"prompt": prompt, "image": example["image_name"], "solution": example["answer"] }
 train_dataset = train_dataset.map(make_conversation)
 
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
-
+keep = {"prompt", "image", "solution"}
+train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_names if c not in keep])
+# train_dataset = train_dataset.map(make_conversation)
+#
+# train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
+#
 
 
 model = Qwen3VLForConditionalGeneration.from_pretrained(
@@ -86,89 +89,139 @@ peft_config = LoraConfig(
     target_modules=["q_proj", "v_proj"],
 )
 
+def _to_text(x, **kwargs):
+    if isinstance(x, str):
+        return x
 
+    # token ids
+    if isinstance(x, list) and len(x) > 0 and isinstance(x[0], int):
+        proc = kwargs.get("processing_class", None)
+        tok = getattr(proc, "tokenizer", None) if proc is not None else None
+        if tok is not None:
+            return tok.decode(x, skip_special_tokens=True)
+        return " ".join(map(str, x))
+
+    # list of strings / dicts
+    if isinstance(x, list):
+        return "\n".join(_to_text(i, **kwargs) for i in x)
+
+    if isinstance(x, dict):
+        if "text" in x and x["text"] is not None:
+            return str(x["text"])
+        if "content" in x:
+            return _to_text(x["content"], **kwargs)
+        return str(x)
+
+    return str(x)
 
 
 def format_reward(completions, **kwargs):
-    """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completions]
-    return [1.0 if match else 0.0 for match in matches]
+    out = []
+    for c in completions:
+        s = _to_text(c, **kwargs).strip()
+        out.append(1.0 if re.match(pattern, s, re.DOTALL) else 0.0)
+    return out
 
 
+# def format_reward(completions, **kwargs):
+#     """Reward function that checks if the reasoning process is enclosed within <think> and </think> tags, while the final answer is enclosed within <answer> and </answer> tags."""
+#     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
+#     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completions]
+#     return [1.0 if match else 0.0 for match in matches]
 
 
-def len_reward(completions, solution, **kwargs) -> float:
-    """Compute length-based rewards to discourage overthinking and promote token efficiency.
+def _extract_answer(text: str) -> str:
+    m = re.search(r"<answer>\s*(.*?)\s*</answer>", text, re.DOTALL | re.IGNORECASE)
+    return (m.group(1) if m else text).strip().lower()
 
-    Taken from the Kimi 1.5 tech report: https://huggingface.co/papers/2501.12599
+def len_reward(completions, solution, **kwargs):
+    texts = [_to_text(c, **kwargs) for c in completions]
+    sols = [str(s).strip().lower() for s in solution]
 
-    Args:
-        completions: List of model completions
-        solution: List of ground truth solutions
-
-    Returns:
-        List of rewards where:
-        - For correct answers: reward = 0.5 - (len - min_len)/(max_len - min_len)
-        - For incorrect answers: reward = min(0, 0.5 - (len - min_len)/(max_len - min_len))
-    """
-    contents = completions
-
-    # First check correctness of answers
-    correctness = []
-    for content, sol in zip(contents, solution):
-        gold_parsed = parse(
-            sol,
-            extraction_mode="first_match",
-            extraction_config=[LatexExtractionConfig()],
-        )
-        if len(gold_parsed) == 0:
-            # Skip unparsable examples
-            correctness.append(True)  # Treat as correct to avoid penalizing
-            print("Failed to parse gold solution: ", sol)
-            continue
-
-        answer_parsed = parse(
-            content,
-            extraction_config=[
-                LatexExtractionConfig(
-                    normalization_config=NormalizationConfig(
-                        nits=False,
-                        malformed_operators=False,
-                        basic_latex=True,
-                        equations=True,
-                        boxed=True,
-                        units=True,
-                    ),
-                    boxed_match_priority=0,
-                    try_extract_without_anchor=False,
-                )
-            ],
-            extraction_mode="first_match",
-        )
-        correctness.append(verify(answer_parsed, gold_parsed))
-
-    # Calculate lengths
-    lengths = [len(content) for content in contents]
-    min_len = min(lengths)
-    max_len = max(lengths)
-
-    # If all responses have the same length, return zero rewards
-    if max_len == min_len:
-        return [0.0] * len(completions)
+    ok = [_extract_answer(t) == s for t, s in zip(texts, sols)]
+    lens = [len(t) for t in texts]
+    mn, mx = min(lens), max(lens)
+    if mx == mn:
+        return [0.0] * len(texts)
 
     rewards = []
-    for length, is_correct in zip(lengths, correctness):
-        lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
-
-        if is_correct:
-            reward = lambda_val
-        else:
-            reward = min(0, lambda_val)
-
-        rewards.append(float(reward))
-
+    for L, correct in zip(lens, ok):
+        lam = 0.5 - (L - mn) / (mx - mn)
+        rewards.append(float(lam if correct else min(0.0, lam)))
     return rewards
+
+# def len_reward(completions, solution, **kwargs) -> float:
+#     """Compute length-based rewards to discourage overthinking and promote token efficiency.
+#
+#     Taken from the Kimi 1.5 tech report: https://huggingface.co/papers/2501.12599
+#
+#     Args:
+#         completions: List of model completions
+#         solution: List of ground truth solutions
+#
+#     Returns:
+#         List of rewards where:
+#         - For correct answers: reward = 0.5 - (len - min_len)/(max_len - min_len)
+#         - For incorrect answers: reward = min(0, 0.5 - (len - min_len)/(max_len - min_len))
+#     """
+#     contents = completions
+#
+#     # First check correctness of answers
+#     correctness = []
+#     for content, sol in zip(contents, solution):
+#         gold_parsed = parse(
+#             sol,
+#             extraction_mode="first_match",
+#             extraction_config=[LatexExtractionConfig()],
+#         )
+#         if len(gold_parsed) == 0:
+#             # Skip unparsable examples
+#             correctness.append(True)  # Treat as correct to avoid penalizing
+#             print("Failed to parse gold solution: ", sol)
+#             continue
+#
+#         answer_parsed = parse(
+#             content,
+#             extraction_config=[
+#                 LatexExtractionConfig(
+#                     normalization_config=NormalizationConfig(
+#                         nits=False,
+#                         malformed_operators=False,
+#                         basic_latex=True,
+#                         equations=True,
+#                         boxed=True,
+#                         units=True,
+#                     ),
+#                     boxed_match_priority=0,
+#                     try_extract_without_anchor=False,
+#                 )
+#             ],
+#             extraction_mode="first_match",
+#         )
+#         correctness.append(verify(answer_parsed, gold_parsed))
+#
+#     # Calculate lengths
+#     lengths = [len(content) for content in contents]
+#     min_len = min(lengths)
+#     max_len = max(lengths)
+#
+#     # If all responses have the same length, return zero rewards
+#     if max_len == min_len:
+#         return [0.0] * len(completions)
+#
+#     rewards = []
+#     for length, is_correct in zip(lengths, correctness):
+#         lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
+#
+#         if is_correct:
+#             reward = lambda_val
+#         else:
+#             reward = min(0, lambda_val)
+#
+#         rewards.append(float(reward))
+#
+#     return rewards
 
 
 
@@ -205,6 +258,7 @@ trainer = GRPOTrainer(
     args=training_args,
     train_dataset=train_dataset,
     peft_config=peft_config,
+    processing_class=processor,
 )
 
 gpu_stats = torch.cuda.get_device_properties(0)
