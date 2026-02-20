@@ -64,14 +64,8 @@ train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish',
 
 
 model = Qwen3VLForConditionalGeneration.from_pretrained(
-    model_name, dtype="float32",
+    model_name, dtype=torch.bfloat16,
     device_map="auto",
-    quantization_config=BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16
-    ),
 )
 
 
@@ -146,6 +140,7 @@ training_args = GRPOConfig(
 
     fp16=False,
     bf16=True,
+    ddp_find_unused_parameters=False,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
