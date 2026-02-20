@@ -12,7 +12,7 @@ import datasets
 from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
-from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+from transformers import AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
 
 
 # =========================
@@ -31,6 +31,13 @@ MODEL_TAG = "qwen3vl_4b_instruct"
 
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
+
+SYSTEM = "SYSTEM INSTRUCTION: think silently if needed."
+USER_TEMPLATE = (
+    "You are given a clinical image and a question.\n"
+    "Return ONLY the disease name in English. No extra words.\n"
+    "Image description: {q}\n"
+)
 
 
 # =========================
@@ -75,16 +82,8 @@ def is_rank0() -> bool:
 
 
 # =========================
-# 2) Dataset building
+# 2) Dataset
 # =========================
-SYSTEM = "SYSTEM INSTRUCTION: think silently if needed."
-USER_TEMPLATE = (
-    "You are given a clinical image and a question.\n"
-    "Return ONLY the disease name in English. No extra words.\n"
-    "Image description: {q}\n"
-)
-
-
 def load_json_list(path: str):
     with open(path, encoding="utf-8") as f:
         obj = json.load(f)
@@ -94,8 +93,7 @@ def load_json_list(path: str):
 
 
 def add_image_path(ex):
-    # Store file path; datasets.Image() will lazy-load as PIL when accessed.
-    ex["image"] = os.path.join(BASE_IMG_DIR, ex["image_name"])
+    ex["image_path"] = os.path.join(BASE_IMG_DIR, ex["image_name"])
     return ex
 
 
@@ -103,26 +101,21 @@ def make_conversation(ex):
     q = ex.get("caption_zh_polish_en")
     q = "null" if q is None else str(q)
 
-    # IMPORTANT: use ex["image"] AFTER casting to datasets.Image()
-    # It will be a PIL.Image.Image when this function runs in map().
     prompt = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": ex["image"]},
+                {"type": "image", "image": ex["image"]},  # PIL after cast_column
                 {"type": "text", "text": USER_TEMPLATE.format(q=q)},
             ],
         },
     ]
-
     return {
         "prompt": prompt,
         "answer": str(ex.get("answer", "")),
         "image_name": str(ex.get("image_name", "")),
         "question_type": str(ex.get("question_type", "")),
-        # Keep image column (optional). It matches the notebook pattern.
-        "image": ex["image"],
     }
 
 
@@ -131,19 +124,28 @@ def build_dataset():
     ds = Dataset.from_list(data)
 
     ds = ds.map(add_image_path)
+    # Use datasets.Image for lazy decoding; it returns PIL when accessed
+    ds = ds.cast_column("image_path", datasets.Image())
+    # Standardize column name to "image" like the TRL notebook pattern
+    ds = ds.rename_column("image_path", "image")
 
-    # Lazy decode image from file path -> PIL when accessed
-    ds = ds.cast_column("image", datasets.Image())
-
-    # Now build prompt using ex["image"] (PIL), not a path string
     ds = ds.map(make_conversation, remove_columns=ds.column_names)
-
     return ds
 
 
 # =========================
-# 3) Reward function + helpers
+# 3) Rewards
 # =========================
+ALIAS = {
+    "scc": "squamous cell carcinoma",
+    "squamous cell ca": "squamous cell carcinoma",
+    "squamous cell cancer": "squamous cell carcinoma",
+    "bcc": "basal cell carcinoma",
+    "basal cell cancer": "basal cell carcinoma",
+    "mm": "melanoma",
+}
+
+
 def extract_user_text(prompt_item) -> str:
     if not isinstance(prompt_item, list):
         return ""
@@ -151,17 +153,14 @@ def extract_user_text(prompt_item) -> str:
     if not user_msgs:
         return ""
     content = user_msgs[-1].get("content", "")
-
     if isinstance(content, str):
         return content
-
     if isinstance(content, list):
-        texts = []
-        for part in content:
-            if isinstance(part, dict) and part.get("type") == "text":
-                texts.append(part.get("text", ""))
-        return "\n".join([t for t in texts if t])
-
+        parts = []
+        for p in content:
+            if isinstance(p, dict) and p.get("type") == "text":
+                parts.append(p.get("text", ""))
+        return "\n".join([x for x in parts if x])
     return ""
 
 
@@ -189,36 +188,28 @@ def normalize_disease(s: str) -> str:
     return s
 
 
-ALIAS = {
-    "scc": "squamous cell carcinoma",
-    "squamous cell ca": "squamous cell carcinoma",
-    "squamous cell cancer": "squamous cell carcinoma",
-    "bcc": "basal cell carcinoma",
-    "basal cell cancer": "basal cell carcinoma",
-    "mm": "melanoma",
-}
-
-
 def canonicalize(s: str) -> str:
     s = normalize_disease(s)
     return normalize_disease(ALIAS.get(s, s))
 
 
-def correctness_reward_func(
-    prompts,
-    completions,
-    answer,
-    image_name=None,
-    trainer_state=None,
-    **kwargs
-) -> list[float]:
+def format_reward(completions, **kwargs):
+    rewards = []
+    for c in completions:
+        text = extract_completion_text(c).strip()
+        # Reward if it looks like a single short line (a disease name), no JSON, no extra sections
+        if ("\n" in text) or ("{" in text) or ("}" in text) or (len(text) > 80) or (len(text) == 0):
+            rewards.append(0.0)
+        else:
+            rewards.append(1.0)
+    return rewards
+
+
+def correctness_reward(prompts, completions, answer, image_name=None, trainer_state=None, **kwargs):
     rewards = []
     step = getattr(trainer_state, "global_step", None)
 
-    if isinstance(image_name, list):
-        names = image_name
-    else:
-        names = [None] * len(completions)
+    names = image_name if isinstance(image_name, list) else [None] * len(completions)
 
     for i, (p, c, gt, nm) in enumerate(zip(prompts, completions, answer, names)):
         q_text = extract_user_text(p)
@@ -242,7 +233,6 @@ def correctness_reward_func(
         if is_rank0():
             q_show = (q_text[:MAX_Q_CHARS] + "...") if len(q_text) > MAX_Q_CHARS else q_text
             pred_show = (pred_raw[:MAX_A_CHARS] + "...") if len(pred_raw) > MAX_A_CHARS else pred_raw
-
             logger.info(
                 "step=%s | idx=%d | image=%s | reward=%.3f | gt='%s' | pred_raw='%s' | q='%s'",
                 str(step),
@@ -258,37 +248,31 @@ def correctness_reward_func(
 
 
 # =========================
-# 4) Train config
+# 4) Train config (GRPO)
 # =========================
 def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
-        eval_on_start=False,
 
-        learning_rate=5e-6,
+        learning_rate=2e-5,
+        max_steps=2000,
 
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=8,
-        num_generations=4,
+        per_device_train_batch_size=2,
+        num_generations=2,
+        max_completion_length=64,
 
-        max_completion_length=128,
+        fp16=True,
 
-        max_steps=7200,
-        logging_steps=20,
-        save_steps=100,
+        logging_steps=10,
+        save_steps=200,
+
         eval_strategy="steps",
         eval_steps=200,
 
         report_to="tensorboard",
+        log_completions=True,
 
         use_vllm=False,
-
-        bf16=True,
-
-        gradient_checkpointing=True,
-        gradient_checkpointing_kwargs={"use_reentrant": False},
-
-        # IMPORTANT: keep columns needed by processor/prompt
         remove_unused_columns=False,
 
         push_to_hub=False,
@@ -296,27 +280,33 @@ def build_training_args():
 
 
 def build_lora_config():
-    # You can keep all-linear; notebook uses q_proj/v_proj, but all-linear is fine for LoRA if memory allows.
     return LoraConfig(
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.1,
+        target_modules=["q_proj", "v_proj"],
         task_type="CAUSAL_LM",
-        r=64,
-        lora_alpha=64,
-        target_modules="all-linear",
     )
 
 
 # =========================
-# 5) Model / Processor
+# 5) Load model / processor (local path)
 # =========================
 def load_model_and_processor():
-    # IMPORTANT: GRPO expects left padding (same as notebook)
     processor = AutoProcessor.from_pretrained(CKPT, padding_side="left")
+
+    qconfig = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
 
     model = Qwen3VLForConditionalGeneration.from_pretrained(
         CKPT,
-        torch_dtype=torch.bfloat16,
         device_map="auto",
-        attn_implementation="eager",
+        quantization_config=qconfig,
+        torch_dtype=torch.float32,
     )
 
     return model, processor
@@ -326,6 +316,15 @@ def load_model_and_processor():
 # 6) Main
 # =========================
 def run():
+    logger.info("Loading model + processor from: %s", CKPT)
+    model, processor = load_model_and_processor()
+    logger.info("torch.cuda.is_available=%s", torch.cuda.is_available())
+    logger.info("cuda_device_count=%s", torch.cuda.device_count())
+    try:
+        logger.info("model device=%s", str(next(model.parameters()).device))
+    except Exception:
+        logger.info("model device=unknown (quantized / sharded)")
+
     logger.info("Loading dataset from: %s", DATA_PATH)
     ds = build_dataset()
     logger.info("Dataset size: %d", len(ds))
@@ -337,27 +336,19 @@ def run():
 
     train_dataset = ds.select(range(0, TRAIN_SIZE))
     eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
-
     logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
 
     training_args = build_training_args()
-    lora_config = build_lora_config()
-
-    logger.info("Loading Qwen3-VL model and processor from: %s", CKPT)
-    model, processor = load_model_and_processor()
-
-    logger.info("torch.cuda.is_available=%s", torch.cuda.is_available())
-    logger.info("cuda_device_count=%s", torch.cuda.device_count())
-    logger.info("model device=%s", str(next(model.parameters()).device))
+    peft_config = build_lora_config()
 
     trainer = GRPOTrainer(
         model=model,
         processing_class=processor,
-        reward_funcs=[correctness_reward_func],
+        reward_funcs=[format_reward, correctness_reward],
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        peft_config=lora_config,
+        peft_config=peft_config,
     )
 
     logger.info("Starting training...")
@@ -365,7 +356,6 @@ def run():
 
     logger.info("Saving model to: %s", training_args.output_dir)
     trainer.save_model(output_dir=training_args.output_dir)
-
     logger.info("Done. Log file: %s", log_path)
 
 
