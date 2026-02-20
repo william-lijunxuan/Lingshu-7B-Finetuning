@@ -174,25 +174,46 @@ def len_reward(completions, solution, **kwargs) -> float:
 
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
-    learning_rate=2e-5,
-    #num_train_epochs=1,
-    max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
 
-    # Parameters that control the data preprocessing
+    eval_on_start=False,
+
+    learning_rate=5e-6,
+
     per_device_train_batch_size=1,
-    max_completion_length=256, # default: 256            # Max completion length produced during training
-    num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
+    gradient_accumulation_steps=8,
+    num_generations=4,
+
+    max_prompt_length=128,
+    max_completion_length=256,
+
+    max_steps=1700,
+    save_steps=100,
+    eval_strategy="steps",
+    eval_steps=200,
 
     fp16=True,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
-    logging_steps=48,                                      # Log training metrics every N steps
+    logging_steps=20,                                      # Log training metrics every N steps
     report_to="trackio",                                  # Experiment tracking tool
 
-    # Hub integration
-    push_to_hub=True,
-    log_completions=True
+
+    use_vllm=True,
+    vllm_mode="colocate",
+    vllm_gpu_memory_utilization=0.45,
+
+    log_completions=True,
+
+    gradient_checkpointing = True,
+    gradient_checkpointing_kwargs = {"use_reentrant": False},
+
+    model_init_kwargs = {
+        "dtype": torch.bfloat16,
+        "attn_implementation": "eager",
+    },
+
+    push_to_hub = False,
 )
 
 
