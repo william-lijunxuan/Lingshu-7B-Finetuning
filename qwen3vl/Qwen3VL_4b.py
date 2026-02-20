@@ -6,8 +6,11 @@ import logging
 import traceback
 from datetime import datetime
 from difflib import SequenceMatcher
+from typing import Any, Dict, List
 
 import torch
+import datasets
+from datasets import Dataset
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
@@ -90,51 +93,51 @@ def load_json_list(path: str):
     return obj
 
 
-def build_prompt_item(image_path: str, caption: str):
-    return [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": image_path},
-                {"type": "text", "text": USER_TEMPLATE.format(q=caption)},
-            ],
-        },
-    ]
+def add_image_path(ex: Dict[str, Any]) -> Dict[str, Any]:
+    ex["image_path"] = os.path.join(BASE_IMG_DIR, str(ex.get("image_name", "")))
+    return ex
 
 
-def build_datasets():
+def build_dataset() -> Dataset:
     data = load_json_list(DATA_PATH)
+    ds = Dataset.from_list(data)
 
-    need = TRAIN_SIZE + EVAL_SIZE
-    if len(data) < need:
-        raise ValueError(f"Dataset too small: {len(data)} < {need}")
+    ds = ds.map(add_image_path)
 
-    def convert(ex):
-        image_name = str(ex.get("image_name", ""))
-        image_path = os.path.join(BASE_IMG_DIR, image_name)
+    # Keep image as datasets.Image so it can be decoded lazily at __getitem__ time
+    ds = ds.cast_column("image_path", datasets.Image())
+    ds = ds.rename_column("image_path", "image")
 
-        cap = ex.get("caption_zh_polish_en")
+    # Do NOT decode images inside map (slow). Create prompt on-the-fly with set_transform.
+    def transform(example: Dict[str, Any]) -> Dict[str, Any]:
+        cap = example.get("caption_zh_polish_en")
         cap = "null" if cap is None else str(cap)
 
+        prompt = [
+            {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": example["image"]},  # PIL image here
+                    {"type": "text", "text": USER_TEMPLATE.format(q=cap)},
+                ],
+            },
+        ]
+
         return {
-            "prompt": build_prompt_item(image_path, cap),
-            "answer": str(ex.get("answer", "")),
-            "image_name": image_name,
-            "question_type": str(ex.get("question_type", "")),
+            "prompt": prompt,
+            "image": example["image"],
+            "answer": str(example.get("answer", "")),
+            "image_name": str(example.get("image_name", "")),
+            "question_type": str(example.get("question_type", "")),
         }
 
-    train_raw = data[:TRAIN_SIZE]
-    eval_raw = data[TRAIN_SIZE:TRAIN_SIZE + EVAL_SIZE]
-
-    train_dataset = [convert(x) for x in train_raw]
-    eval_dataset = [convert(x) for x in eval_raw]
-
-    return train_dataset, eval_dataset
+    ds.set_transform(transform)
+    return ds
 
 
 # =========================
-# 3) Rewards
+# 3) Reward helpers
 # =========================
 ALIAS = {
     "scc": "squamous cell carcinoma",
@@ -156,11 +159,11 @@ def extract_user_text(prompt_item) -> str:
     if isinstance(content, str):
         return content
     if isinstance(content, list):
-        parts = []
-        for p in content:
-            if isinstance(p, dict) and p.get("type") == "text":
-                parts.append(p.get("text", ""))
-        return "\n".join([x for x in parts if x])
+        texts = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                texts.append(part.get("text", ""))
+        return "\n".join([t for t in texts if t])
     return ""
 
 
@@ -197,14 +200,24 @@ def format_reward(completions, **kwargs):
     rewards = []
     for c in completions:
         text = extract_completion_text(c).strip()
-        if ("\n" in text) or ("{" in text) or ("}" in text) or (len(text) > 80) or (len(text) == 0):
+        if not text:
+            rewards.append(0.0)
+            continue
+        if "\n" in text or "{" in text or "}" in text or len(text) > 80:
             rewards.append(0.0)
         else:
             rewards.append(1.0)
     return rewards
 
 
-def correctness_reward(prompts, completions, answer, image_name=None, trainer_state=None, **kwargs):
+def correctness_reward(
+    prompts,
+    completions,
+    answer,
+    image_name=None,
+    trainer_state=None,
+    **kwargs
+) -> List[float]:
     rewards = []
     step = getattr(trainer_state, "global_step", None)
 
@@ -247,7 +260,7 @@ def correctness_reward(prompts, completions, answer, image_name=None, trainer_st
 
 
 # =========================
-# 4) Train config (GRPO)
+# 4) Train config
 # =========================
 def build_training_args():
     return GRPOConfig(
@@ -289,7 +302,7 @@ def build_lora_config():
 
 
 # =========================
-# 5) Load model / processor (local path)
+# 5) Load model / processor
 # =========================
 def load_model_and_processor():
     processor = AutoProcessor.from_pretrained(CKPT, padding_side="left")
@@ -299,7 +312,7 @@ def load_model_and_processor():
         import bitsandbytes  # noqa: F401
         use_4bit = True
     except Exception:
-        logger.warning("bitsandbytes not found; falling back to bf16 without 4-bit quantization.")
+        logger.warning("bitsandbytes not found; using bf16 without 4-bit quantization.")
 
     if use_4bit:
         qconfig = BitsAndBytesConfig(
@@ -331,6 +344,7 @@ def load_model_and_processor():
 def run():
     logger.info("Loading model + processor from: %s", CKPT)
     model, processor = load_model_and_processor()
+
     logger.info("torch.cuda.is_available=%s", torch.cuda.is_available())
     logger.info("cuda_device_count=%s", torch.cuda.device_count())
     try:
@@ -339,12 +353,16 @@ def run():
         logger.info("model device=unknown (quantized / sharded)")
 
     logger.info("Loading dataset from: %s", DATA_PATH)
-    train_list, eval_list = build_datasets()
-    logger.info("Train size: %d | Eval size: %d", len(train_list), len(eval_list))
+    ds = build_dataset()
 
-    from datasets import Dataset
-    train_dataset = Dataset.from_list(train_list)
-    eval_dataset = Dataset.from_list(eval_list)
+    need = TRAIN_SIZE + EVAL_SIZE
+    if len(ds) < need:
+        raise ValueError(f"Dataset too small: {len(ds)} < {need}")
+
+    train_dataset = ds.select(range(0, TRAIN_SIZE))
+    eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
+
+    logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
 
     training_args = build_training_args()
     peft_config = build_lora_config()
