@@ -179,15 +179,15 @@ training_args = GRPOConfig(
     max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
 
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=2,
-    max_completion_length=1024, # default: 256            # Max completion length produced during training
-    num_generations=2, # 2, # default: 8                  # Number of generations produced during training for comparison
+    per_device_train_batch_size=1,
+    max_completion_length=256, # default: 256            # Max completion length produced during training
+    num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
     fp16=True,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
-    logging_steps=1,                                      # Log training metrics every N steps
+    logging_steps=48,                                      # Log training metrics every N steps
     report_to="trackio",                                  # Experiment tracking tool
 
     # Hub integration
