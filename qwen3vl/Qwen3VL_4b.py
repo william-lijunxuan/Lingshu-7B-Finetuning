@@ -49,7 +49,8 @@ def make_conversation(example):
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": example["image_name"]},
+                {"type": "image"},
+                # {"type": "image", "image": example["image_name"]},
                 {"type": "text", "text": "Image description: "+example["caption_zh_polish_en"]},
             ],
         },
