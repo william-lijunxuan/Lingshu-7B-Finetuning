@@ -58,7 +58,7 @@ def make_conversation(example):
 
 train_dataset = train_dataset.map(make_conversation)
 
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type',])
+train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
 
