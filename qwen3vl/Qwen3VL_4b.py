@@ -65,6 +65,7 @@ train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish',
 model = Qwen3VLForConditionalGeneration.from_pretrained(
     model_name, dtype="float32",
     device_map="auto",
+    max_memory={0: "22GiB", 1: "22GiB"},
     quantization_config=BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
