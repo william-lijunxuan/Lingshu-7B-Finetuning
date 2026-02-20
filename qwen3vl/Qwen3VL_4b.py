@@ -88,7 +88,7 @@ def is_rank0() -> bool:
 
 
 # =========================
-# 2) Dataset
+# 2) Dataset helpers
 # =========================
 def load_json_list(path: str):
     with open(path, encoding="utf-8") as f:
@@ -105,17 +105,12 @@ def pick_caption(ex: dict) -> str:
     return "null"
 
 
-def build_prompt(ex: dict) -> dict:
+def make_conversation(ex: dict) -> dict:
     image_name = str(ex.get("image_name", "")).strip()
     image_path = os.path.join(BASE_IMG_DIR, image_name)
-
     q = pick_caption(ex)
     q = q[:MAX_Q_CHARS]
 
-    # IMPORTANT:
-    # Keep the image as a local path string, not a dict (e.g., {"path":..., "bytes":...}).
-    # Otherwise Qwen3VLProcessor may insert <|image_pad|> into the text but fail to collect the image,
-    # causing IndexError in processing_qwen3_vl.py.
     prompt = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM}]},
         {
@@ -135,19 +130,76 @@ def build_prompt(ex: dict) -> dict:
     }
 
 
-def build_dataset():
+def count_images_in_prompt(prompt):
+    if not isinstance(prompt, list):
+        return 0
+    n = 0
+    for msg in prompt:
+        content = msg.get("content")
+        if isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "image":
+                    n += 1
+    return n
+
+
+def safe_apply_chat_template(processor, prompt, image_name_for_log=""):
+    """
+    Returns (ok: bool, err: str)
+    """
+    try:
+        _ = processor.apply_chat_template(
+            prompt,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_tensors="pt",
+            return_dict=True,
+        )
+        return True, ""
+    except Exception as e:
+        if is_rank0():
+            logger.error("apply_chat_template failed for image=%s | err=%r", image_name_for_log, e)
+        return False, repr(e)
+
+
+def build_dataset(processor):
     data = load_json_list(DATA_PATH)
 
     need = TRAIN_SIZE + EVAL_SIZE
     if len(data) < need:
         raise ValueError(f"Dataset too small: {len(data)} < {need}")
 
-    # Only preprocess what you will actually use (fast iteration).
     data = data[:need]
-
     ds = Dataset.from_list(data)
-    ds = ds.map(build_prompt, remove_columns=ds.column_names)
-    return ds
+    ds = ds.map(make_conversation, remove_columns=ds.column_names)
+
+    # Validate prompts BEFORE training, drop any sample that causes the mismatch/index error.
+    good_rows = []
+    bad_rows = []
+
+    for i in range(len(ds)):
+        row = ds[i]
+        prompt = row["prompt"]
+        img_count = count_images_in_prompt(prompt)
+
+        ok, err = safe_apply_chat_template(processor, prompt, row.get("image_name", ""))
+        if ok:
+            good_rows.append(row)
+        else:
+            bad_rows.append((row.get("image_name", ""), img_count, err))
+
+    if is_rank0() and bad_rows:
+        logger.error("Found %d bad samples (dropped). Details:", len(bad_rows))
+        for (nm, imgc, err) in bad_rows:
+            logger.error("bad_sample image=%s | image_items_in_prompt=%d | err=%s", nm, imgc, err)
+
+    if len(good_rows) < need:
+        raise RuntimeError(
+            f"After filtering, only {len(good_rows)} usable samples left; need {need}. "
+            f"Fix the offending samples listed in the log, or increase the slice size."
+        )
+
+    return Dataset.from_list(good_rows)
 
 
 # =========================
@@ -217,13 +269,7 @@ def format_reward(completions, **kwargs):
         if not text:
             rewards.append(0.0)
             continue
-        if "\n" in text:
-            rewards.append(0.0)
-            continue
-        if "{" in text or "}" in text:
-            rewards.append(0.0)
-            continue
-        if len(text) > 80:
+        if "\n" in text or "{" in text or "}" in text or len(text) > 80:
             rewards.append(0.0)
             continue
         rewards.append(1.0)
@@ -272,18 +318,17 @@ def correctness_reward(prompts, completions, answer, image_name=None, trainer_st
 
 
 # =========================
-# 4) GRPO config
+# 4) Train config
 # =========================
 def build_training_args():
     return GRPOConfig(
-        output_dir=OUTPUT_DIR,
         learning_rate=2e-5,
         max_steps=100,
         per_device_train_batch_size=2,
         num_generations=2,
-        max_prompt_length=512,
         max_completion_length=64,
         fp16=True,
+        output_dir=OUTPUT_DIR,
         logging_steps=1,
         report_to="trackio",
         log_completions=True,
@@ -304,7 +349,7 @@ def build_lora_config():
 
 
 # =========================
-# 5) Model / Processor
+# 5) Load model / processor
 # =========================
 def load_model_and_processor():
     processor = AutoProcessor.from_pretrained(CKPT, padding_side="left")
@@ -318,16 +363,16 @@ def load_model_and_processor():
         )
         model = Qwen3VLForConditionalGeneration.from_pretrained(
             CKPT,
+            dtype="float32",
             device_map="auto",
             quantization_config=qconfig,
-            torch_dtype=torch.float32,
         )
     else:
-        logger.warning("bitsandbytes not available; loading model without 4-bit quantization.")
+        logger.warning("bitsandbytes not available; loading fp16 without 4-bit quantization.")
         model = Qwen3VLForConditionalGeneration.from_pretrained(
             CKPT,
-            device_map="auto",
             torch_dtype=torch.float16,
+            device_map="auto",
         )
 
     return model, processor
@@ -337,37 +382,25 @@ def load_model_and_processor():
 # 6) Main
 # =========================
 def run():
-    logger.info("Loading dataset from: %s", DATA_PATH)
-    ds = build_dataset()
-    logger.info("Dataset size (used): %d", len(ds))
-    logger.info("Columns: %s", ds.column_names)
-
-    train_dataset = ds.select(range(0, TRAIN_SIZE))
-    eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
-    logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
-
     logger.info("Loading model + processor from: %s", CKPT)
     model, processor = load_model_and_processor()
+
     logger.info("torch.cuda.is_available=%s", torch.cuda.is_available())
     logger.info("cuda_device_count=%s", torch.cuda.device_count())
-
     try:
         logger.info("model first param device=%s", str(next(model.parameters()).device))
     except Exception:
         logger.info("model device=unknown (quantized/sharded)")
 
-    training_args = build_training_args()
-    peft_config = build_lora_config()
+    logger.info("Loading dataset from: %s", DATA_PATH)
+    ds = build_dataset(processor)
+    logger.info("Dataset size (used, filtered): %d", len(ds))
+    logger.info("Columns: %s", ds.column_names)
 
-    trainer = GRPOTrainer(
-        model=model,
-        processing_class=processor,
-        reward_funcs=[format_reward, correctness_reward],
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        peft_config=peft_config,
-    )
+    need = TRAIN_SIZE + EVAL_SIZE
+    train_dataset = ds.select(range(0, TRAIN_SIZE))
+    eval_dataset = ds.select(range(TRAIN_SIZE, TRAIN_SIZE + EVAL_SIZE))
+    logger.info("Train size: %d | Eval size: %d", len(train_dataset), len(eval_dataset))
 
     if torch.cuda.is_available():
         gpu_stats = torch.cuda.get_device_properties(0)
@@ -375,11 +408,24 @@ def run():
         max_memory = round(gpu_stats.total_memory / 1024**3, 3)
         logger.info("GPU=%s | Max memory=%.3f GB | Reserved=%.3f GB", gpu_stats.name, max_memory, start_gpu_memory)
 
+    training_args = build_training_args()
+    peft_config = build_lora_config()
+
+    trainer = GRPOTrainer(
+        model=model,
+        reward_funcs=[format_reward, correctness_reward],
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        peft_config=peft_config,
+        processing_class=processor,
+    )
+
     logger.info("Starting training...")
     trainer.train()
 
     logger.info("Saving model to: %s", training_args.output_dir)
-    trainer.save_model(output_dir=training_args.output_dir)
+    trainer.save_model(training_args.output_dir)
     logger.info("Done. Log file: %s", log_path)
 
 
