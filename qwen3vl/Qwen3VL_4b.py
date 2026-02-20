@@ -65,7 +65,6 @@ train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish',
 
 model = Qwen3VLForConditionalGeneration.from_pretrained(
     model_name, dtype=torch.bfloat16,
-    device_map="auto",
 )
 
 
