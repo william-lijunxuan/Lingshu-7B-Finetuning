@@ -9,6 +9,10 @@ from math_verify import LatexExtractionConfig, parse, verify
 from latex2sympy2_extended import NormalizationConfig
 from trl import GRPOConfig
 from trl import GRPOTrainer
+import os
+os.environ["ACCELERATE_MIXED_PRECISION"] = "fp16"
+os.environ["TORCH_DTYPE"] = "float16"
+
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
 DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
@@ -246,6 +250,7 @@ training_args = GRPOConfig(
 
     fp16=True,
     bf16=False,
+    max_grad_norm=0.0,
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
     logging_steps=1,                                      # Log training metrics every N steps
