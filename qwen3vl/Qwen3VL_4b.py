@@ -67,16 +67,22 @@ train_dataset = train_dataset.remove_columns([c for c in train_dataset.column_na
 
 
 model = Qwen3VLForConditionalGeneration.from_pretrained(
-    model_name, dtype="float32",
+    model_name,
+    torch_dtype=torch.float16,
     device_map="auto",
     max_memory={0: "22GiB", 1: "22GiB"},
     quantization_config=BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
+        bnb_4bit_compute_dtype=torch.float16,
     ),
 )
+
+dtypes = {}
+for _, p in model.named_parameters():
+    dtypes[str(p.dtype)] = dtypes.get(str(p.dtype), 0) + 1
+print("param dtypes:", dtypes)
 
 
 
@@ -239,7 +245,7 @@ training_args = GRPOConfig(
     num_generations=2, # 2, # default: 8                  # Number of generations produced during training for comparison
 
     fp16=True,
-
+    bf16=False,
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
     logging_steps=1,                                      # Log training metrics every N steps
