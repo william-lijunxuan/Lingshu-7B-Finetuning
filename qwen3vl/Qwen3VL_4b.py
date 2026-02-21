@@ -78,7 +78,7 @@ processor = AutoProcessor.from_pretrained(model_name, padding_side="left")
 SYSTEM_PROMPT = (
   "You are given a clinical image and a question.\n"
   "Respond EXACTLY in this format:\n"
-  "<answer>\nDISEASE_NAME_IN_ENGLISH\n</answer>\n"
+  "<answer>DISEASE_NAME_IN_ENGLISH</answer>\n"
   "Do not output anything else."
 )
 
