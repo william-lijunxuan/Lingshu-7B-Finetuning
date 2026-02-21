@@ -112,7 +112,7 @@ def extract_text(completions):
     processed = []
     for c in completions:
         if isinstance(c, list):
-            text = " ".join(
+            text = "".join(
                 item["text"] if isinstance(item, dict) and "text" in item
                 else str(item)
                 for item in c
@@ -135,7 +135,6 @@ def accuracy_reward(completions, solution, **kwargs):
     rewards = []
     for i, (content, sol) in enumerate(zip(contents, solution)):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
-        pred = ans_match.group(1).strip().lower() if ans_match else ""
         pred = re.sub(r'\s+', ' ', ans_match.group(1)).strip().lower() if ans_match else ""
 
         a_norm = _norm(sol)
