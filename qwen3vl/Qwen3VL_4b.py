@@ -49,7 +49,8 @@ def is_rank0() -> bool:
         return torch.distributed.get_rank() == 0
     return True
 
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
 
 def to_abs_path(example):
     p = example["image_name"]
@@ -104,15 +105,7 @@ model = Qwen3VLForConditionalGeneration.from_pretrained(
 
 
 
-# You may need to update `target_modules` depending on the architecture of your chosen model.
-# For example, different VLMs might have different attention/projection layer names.
-peft_config = LoraConfig(
-    r=8,
-    lora_alpha=32,
-    lora_dropout=0.1,
-    # target_modules=["q_proj", "v_proj"],
-    target_modules="all-linear",
-)
+
 
 def extract_text(completions):
     processed = []
@@ -196,7 +189,7 @@ training_args = GRPOConfig(
     learning_rate=2e-5,
     #num_train_epochs=1,
     # max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
-    num_train_epochs=1,
+    num_train_epochs=3,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=4,
     max_completion_length=256, # default: 256            # Max completion length produced during training
@@ -217,7 +210,15 @@ training_args = GRPOConfig(
 )
 
 
-
+# You may need to update `target_modules` depending on the architecture of your chosen model.
+# For example, different VLMs might have different attention/projection layer names.
+peft_config = LoraConfig(
+    r=64,
+    lora_alpha=64,
+    lora_dropout=0.1,
+    # target_modules=["q_proj", "v_proj"],
+    target_modules="all-linear",
+)
 trainer = GRPOTrainer(
     model=model,
     # reward_funcs=[format_reward, len_reward],
