@@ -50,7 +50,7 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:0.1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
 print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
