@@ -61,3 +61,12 @@ wandb
 mr.william.ljx@gmail.com 
 1be3c3080c7714f2f5e1c1fb9e78ec54bdbc0193
 ```
+
+
+## Qwen3VL_4b
+![img.png](img.png)
+```bash
+cd /Lingshu-7B-Finetuning/qwen3vl
+accelerate config
+accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3VL_4b.py
+```
