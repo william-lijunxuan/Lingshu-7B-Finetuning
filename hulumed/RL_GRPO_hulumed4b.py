@@ -17,11 +17,11 @@ from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 # =========================
 # 0) Config
 # =========================
-DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
-BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
+BASE_IMG_DIR = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
-MODEL_PATH = "/root/model/Hulu-Med-4B"
-OUTPUT_DIR = "/root/model/GRPO_hulumed4b"
+MODEL_PATH = "/mnt/d/skinalor/model/Hulu-Med-4B"
+OUTPUT_DIR = "/mnt/d/skinalor/model/GRPO_hulumed4b"
 MODEL_TAG = "GRPO_hulumed4b"
 
 TRAIN_SIZE = 4
