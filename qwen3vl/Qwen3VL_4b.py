@@ -16,7 +16,7 @@ from  utils import _norm, _canonical,PARENT_MAP
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3VL_4B"
-DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
+DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
 IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
 
 
@@ -50,8 +50,8 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
-
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:0.1%]")
+print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
     if p and not os.path.isabs(p):
