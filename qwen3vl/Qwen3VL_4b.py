@@ -9,10 +9,41 @@ import re
 # from latex2sympy2_extended import NormalizationConfig
 from trl import GRPOConfig
 from trl import GRPOTrainer
+import logging
+import sys
+from datetime import datetime
+
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
+MODEL_TAG = "Qwen3VL_4B"
 DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
 IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
+
+
+def setup_logging(model_tag: str):
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(os.getcwd(), f"RL_GRPO_{model_tag}_{ts}.log")
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.handlers.clear()
+    fmt = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    fh = logging.FileHandler(log_file, encoding="utf-8")
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(fmt)
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(fmt)
+    root.addHandler(fh)
+    root.addHandler(sh)
+    logger = logging.getLogger("grpo")
+    logger.info("Log file: %s", log_file)
+    return logger, log_file
+
+logger, log_path = setup_logging(MODEL_TAG)
+
 
 train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:5%]")
 
@@ -147,7 +178,7 @@ training_args = GRPOConfig(
 
     fp16=False,
     bf16=True,
-    ddp_find_unused_parameters=False,
+    ddp_find_unused_parameters=True,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
@@ -174,8 +205,8 @@ gpu_stats = torch.cuda.get_device_properties(0)
 start_gpu_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
 max_memory = round(gpu_stats.total_memory / 1024 / 1024 / 1024, 3)
 
-print(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
-print(f"{start_gpu_memory} GB of memory reserved.")
+logger.info(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
+logger.info(f"{start_gpu_memory} GB of memory reserved.")
 
 
 trainer_stats = trainer.train()
@@ -186,13 +217,13 @@ used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
 used_percentage = round(used_memory / max_memory * 100, 3)
 lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
 
-print(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
-print(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
-print(f"Peak reserved memory = {used_memory} GB.")
-print(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
-print(f"Peak reserved memory % of max memory = {used_percentage} %.")
-print(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
+logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
+logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
+logger.info(f"Peak reserved memory = {used_memory} GB.")
+logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
+logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
+logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
 trainer.save_model(output_dir)
 trainer.push_to_hub("williamljx/qwen3vl-skinCap")
-print(f"Congratulations! done!")
+logger.info(f"Congratulations! done!")
