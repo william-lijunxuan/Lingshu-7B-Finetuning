@@ -65,7 +65,7 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:0.5%]")
 print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
@@ -204,7 +204,7 @@ training_args = GRPOConfig(
     learning_rate=2e-5,
     #num_train_epochs=1,
     # max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
-    num_train_epochs=3,
+    num_train_epochs=1,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=4,
     max_completion_length=256, # default: 256            # Max completion length produced during training
