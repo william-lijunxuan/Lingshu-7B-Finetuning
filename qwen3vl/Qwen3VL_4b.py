@@ -38,6 +38,21 @@ def setup_logging(model_tag: str):
     sh.setFormatter(fmt)
     root.addHandler(fh)
     root.addHandler(sh)
+
+
+    class StreamToLogger:
+        def __init__(self, logger, level):
+            self.logger = logger
+            self.level = level
+        def write(self, msg):
+            if msg.strip():
+                self.logger.log(self.level, msg.rstrip())
+        def flush(self):
+            pass
+
+    sys.stdout = StreamToLogger(logging.getLogger("stdout"), logging.INFO)
+    sys.stderr = StreamToLogger(logging.getLogger("stderr"), logging.WARNING)
+
     logger = logging.getLogger("grpo")
     logger.info("Log file: %s", log_file)
     return logger, log_file
@@ -236,10 +251,10 @@ logger.info(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
 logger.info(f"{start_gpu_memory} GB of memory reserved.")
 
 
-trainer_stats = trainer.train()
 
 
-if __name__ == "__main__":
+
+def run():
     try:
         logger.info("Starting training...")
         trainer_stats = trainer.train()
@@ -273,3 +288,6 @@ if __name__ == "__main__":
         raise
     finally:
         logging.shutdown()
+
+
+run()
