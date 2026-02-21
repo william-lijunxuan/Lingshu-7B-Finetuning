@@ -239,18 +239,37 @@ logger.info(f"{start_gpu_memory} GB of memory reserved.")
 trainer_stats = trainer.train()
 
 
-used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
-used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
-used_percentage = round(used_memory / max_memory * 100, 3)
-lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
+if __name__ == "__main__":
+    try:
+        logger.info("Starting training...")
+        trainer_stats = trainer.train()
 
-logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
-logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
-logger.info(f"Peak reserved memory = {used_memory} GB.")
-logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
-logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
-logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
+        used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
+        used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
+        used_percentage = round(used_memory / max_memory * 100, 3)
+        lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
 
-trainer.save_model(output_dir)
-trainer.push_to_hub("williamljx/qwen3vl-skinCap")
-logger.info(f"Congratulations! done!")
+        logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
+        logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
+        logger.info(f"Peak reserved memory = {used_memory} GB.")
+        logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
+        logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
+        logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
+
+        trainer.save_model(output_dir)
+        trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+        logger.info("Congratulations! done!")
+
+    except KeyboardInterrupt:
+        if is_rank0():
+            logger.warning("Interrupted by user (KeyboardInterrupt). Log file: %s", log_path)
+        raise
+    except Exception as e:
+        if is_rank0():
+            import traceback
+            logger.error("Fatal error occurred. Log file: %s", log_path)
+            logger.error("Exception: %s", repr(e))
+            logger.error("Traceback:\n%s", traceback.format_exc())
+        raise
+    finally:
+        logging.shutdown()
