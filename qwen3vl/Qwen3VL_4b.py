@@ -130,10 +130,10 @@ def extract_text(completions):
     return processed
 
 def format_reward(completions, **kwargs):
-    pattern = r"<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>"
+    pattern = r"^\s*<answer>\s*.+?\s*</answer>\s*$"
     contents = extract_text(completions)
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in contents]
-    return [1.0 if match else 0.0 for match in matches]
+    matches = [re.match(pattern, c, re.DOTALL) for c in contents]
+    return [1.0 if m else 0.0 for m in matches]
 
 def accuracy_reward(completions, solution, **kwargs):
     contents = extract_text(completions)
@@ -263,7 +263,6 @@ def run():
         logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
         trainer.save_model(output_dir)
-        trainer.push_to_hub("williamljx/qwen3vl-skinCap")
         logger.info("Congratulations! done!")
 
     except KeyboardInterrupt:
