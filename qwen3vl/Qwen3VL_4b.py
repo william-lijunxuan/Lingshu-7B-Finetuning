@@ -12,7 +12,7 @@ from trl import GRPOTrainer
 import logging
 import sys
 from datetime import datetime
-
+from  utils import _norm, _canonical,PARENT_MAP
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3VL_4B"
@@ -45,7 +45,7 @@ def setup_logging(model_tag: str):
 logger, log_path = setup_logging(MODEL_TAG)
 
 
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:5%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
 
 def to_abs_path(example):
     p = example["image_name"]
@@ -138,7 +138,26 @@ def accuracy_reward(completions, solution, **kwargs):
     for content, sol in zip(contents, solution):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
         pred = ans_match.group(1).strip().lower() if ans_match else ""
-        rewards.append(1.0 if pred == sol.strip().lower() else 0.0)
+
+        a_norm = _norm(sol)
+        p_norm = _norm(pred)
+
+        is_correct = False
+
+
+        if a_norm == p_norm:
+            is_correct = True
+        else:
+            a_can = _canonical(a_norm)
+            p_can = _canonical(p_norm)
+            if a_can == p_can:
+                is_correct = True
+            else:
+                children = PARENT_MAP.get(a_can)
+                if children and p_can in children:
+                    is_correct = True
+
+        rewards.append(1.0 if is_correct else 0.0)
     return rewards
 # def len_reward(completions, solution, **kwargs):
 #     contents = extract_text(completions)
