@@ -13,6 +13,7 @@ import logging
 import sys
 from datetime import datetime
 from  utils import _norm, _canonical,PARENT_MAP
+from huggingface_hub import HfApi
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3VL_4B"
@@ -211,7 +212,7 @@ training_args = GRPOConfig(
     report_to="trackio",                                  # Experiment tracking tool
 
     # Hub integration
-    push_to_hub=True,
+    push_to_hub=False,
     log_completions=True
 )
 
@@ -263,6 +264,20 @@ def run():
         logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
         trainer.save_model(output_dir)
+        trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+        api = HfApi()
+        api.create_repo(
+            repo_id="williamljx/qwen3vl-skinCap-completions",
+            repo_type="dataset",
+            exist_ok=True,
+        )
+
+        api.upload_folder(
+            repo_id="williamljx/qwen3vl-skinCap-completions",
+            repo_type="dataset",
+            folder_path=os.path.join(output_dir, "completions"),
+            path_in_repo="completions",
+        )
         logger.info("Congratulations! done!")
 
     except KeyboardInterrupt:
