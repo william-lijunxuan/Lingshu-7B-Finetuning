@@ -5,8 +5,8 @@ import torch
 from transformers import AutoProcessor
 from peft import LoraConfig
 import re
-from math_verify import LatexExtractionConfig, parse, verify
-from latex2sympy2_extended import NormalizationConfig
+# from math_verify import LatexExtractionConfig, parse, verify
+# from latex2sympy2_extended import NormalizationConfig
 from trl import GRPOConfig
 from trl import GRPOTrainer
 
@@ -75,7 +75,8 @@ peft_config = LoraConfig(
     r=8,
     lora_alpha=32,
     lora_dropout=0.1,
-    target_modules=["q_proj", "v_proj"],
+    # target_modules=["q_proj", "v_proj"],
+    target_modules="all-linear",
 )
 
 def extract_text(completions):
@@ -100,42 +101,49 @@ def format_reward(completions, **kwargs):
     matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in contents]
     return [1.0 if match else 0.0 for match in matches]
 
-
-def len_reward(completions, solution, **kwargs):
+def accuracy_reward(completions, solution, **kwargs):
     contents = extract_text(completions)
-
-    correctness = []
+    rewards = []
     for content, sol in zip(contents, solution):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
         pred = ans_match.group(1).strip().lower() if ans_match else ""
-        correctness.append(pred == sol.strip().lower())
-
-    lengths = [len(content) for content in contents]
-    min_len = min(lengths)
-    max_len = max(lengths)
-
-    if max_len == min_len:
-        return [0.0] * len(completions)
-
-    rewards = []
-    for length, is_correct in zip(lengths, correctness):
-        lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
-        reward = lambda_val if is_correct else min(0, lambda_val)
-        rewards.append(float(reward))
-
+        rewards.append(1.0 if pred == sol.strip().lower() else 0.0)
     return rewards
+# def len_reward(completions, solution, **kwargs):
+#     contents = extract_text(completions)
+#
+#     correctness = []
+#     for content, sol in zip(contents, solution):
+#         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
+#         pred = ans_match.group(1).strip().lower() if ans_match else ""
+#         correctness.append(pred == sol.strip().lower())
+#
+#     lengths = [len(content) for content in contents]
+#     min_len = min(lengths)
+#     max_len = max(lengths)
+#
+#     if max_len == min_len:
+#         return [0.0] * len(completions)
+#
+#     rewards = []
+#     for length, is_correct in zip(lengths, correctness):
+#         lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
+#         reward = lambda_val if is_correct else min(0, lambda_val)
+#         rewards.append(float(reward))
+#
+#     return rewards
 
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
     learning_rate=2e-5,
     #num_train_epochs=1,
-    max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
-
+    # max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
+    num_train_epochs=1,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=2,
     max_completion_length=256, # default: 256            # Max completion length produced during training
-    num_generations=2, # 2, # default: 8                  # Number of generations produced during training for comparison
+    num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
     fp16=False,
     bf16=True,
@@ -155,7 +163,8 @@ training_args = GRPOConfig(
 
 trainer = GRPOTrainer(
     model=model,
-    reward_funcs=[format_reward, len_reward],
+    # reward_funcs=[format_reward, len_reward],
+    reward_funcs=[format_reward, accuracy_reward],
     args=training_args,
     train_dataset=train_dataset,
     peft_config=peft_config,
