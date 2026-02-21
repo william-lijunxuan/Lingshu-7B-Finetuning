@@ -51,7 +51,7 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:20]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[20%]")
 print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
@@ -136,6 +136,7 @@ def accuracy_reward(completions, solution, **kwargs):
     for i, (content, sol) in enumerate(zip(contents, solution)):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
         pred = ans_match.group(1).strip().lower() if ans_match else ""
+        pred = re.sub(r'\s+', ' ', ans_match.group(1)).strip().lower() if ans_match else ""
 
         a_norm = _norm(sol)
         p_norm = _norm(pred)
