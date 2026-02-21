@@ -44,6 +44,10 @@ def setup_logging(model_tag: str):
 
 logger, log_path = setup_logging(MODEL_TAG)
 
+def is_rank0() -> bool:
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        return torch.distributed.get_rank() == 0
+    return True
 
 train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
 
@@ -135,7 +139,7 @@ def format_reward(completions, **kwargs):
 def accuracy_reward(completions, solution, **kwargs):
     contents = extract_text(completions)
     rewards = []
-    for content, sol in zip(contents, solution):
+    for i, (content, sol) in enumerate(zip(contents, solution)):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
         pred = ans_match.group(1).strip().lower() if ans_match else ""
 
@@ -156,8 +160,11 @@ def accuracy_reward(completions, solution, **kwargs):
                 children = PARENT_MAP.get(a_can)
                 if children and p_can in children:
                     is_correct = True
+        reward = 1.0 if is_correct else 0.0
+        rewards.append(reward)
 
-        rewards.append(1.0 if is_correct else 0.0)
+        if is_rank0():
+            logger.info("idx=%d | reward=%.1f | gt='%s' | pred='%s'", i, reward, a_norm, p_norm)
     return rewards
 # def len_reward(completions, solution, **kwargs):
 #     contents = extract_text(completions)
