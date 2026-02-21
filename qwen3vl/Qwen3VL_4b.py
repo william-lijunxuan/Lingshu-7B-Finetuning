@@ -70,12 +70,17 @@ print(train_dataset[0]["image_name"])
 model_name = "/root/model/Qwen3-VL-4B-Instruct" # "Qwen/Qwen3-VL-8B-Instruct"
 processor = AutoProcessor.from_pretrained(model_name, padding_side="left")
 
+# SYSTEM_PROMPT = (
+#     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
+#     "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
+#     "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+# )
 SYSTEM_PROMPT = (
-    "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
-    "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
-    "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+  "You are given a clinical image and a question.\n"
+  "Respond EXACTLY in this format:\n"
+  "<answer>\nDISEASE_NAME_IN_ENGLISH\n</answer>\n"
+  "Do not output anything else."
 )
-
 
 def make_conversation(example):
     prompt = [
