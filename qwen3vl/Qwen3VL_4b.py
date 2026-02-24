@@ -16,7 +16,7 @@ from  utils import _norm, _canonical,PARENT_MAP
 
 output_dir = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3VL_4B"
-DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
+DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
 IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
 
@@ -188,8 +188,8 @@ training_args = GRPOConfig(
 
     learning_rate=2e-5,
     #num_train_epochs=1,
-    # max_steps=100,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
-    num_train_epochs=3,
+    max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
+    # num_train_epochs=3,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=4,
     max_completion_length=256, # default: 256            # Max completion length produced during training
