@@ -45,8 +45,8 @@ def is_rank0() -> bool:
         return torch.distributed.get_rank() == 0
     return True
 
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
+# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
 
 def to_abs_path(example):
     p = example["image_name"]
