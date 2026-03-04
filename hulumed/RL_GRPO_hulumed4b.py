@@ -166,6 +166,7 @@ chat_template_kwargs= {
 
 generation_kwargs = {
     "max_new_tokens": 256,
+    "min_new_tokens": 1,
     "temperature": 0.7,
     "top_p": 0.8,
     "top_k": 20,
