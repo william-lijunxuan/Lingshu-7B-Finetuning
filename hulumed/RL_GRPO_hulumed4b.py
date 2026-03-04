@@ -65,7 +65,7 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/root/model/Qwen3.5-4B"
+model_name = "/root/model/Hulu-Med-4B"
 processor = AutoProcessor.from_pretrained(model_name,use_fast=True)
 
 SYSTEM_PROMPT = (
