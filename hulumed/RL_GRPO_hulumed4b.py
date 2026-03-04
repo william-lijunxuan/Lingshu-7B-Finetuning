@@ -66,7 +66,7 @@ print(train_dataset[0]["image_name"])
 
 
 model_name = "/root/model/Hulu-Med-4B"
-processor = AutoProcessor.from_pretrained(model_name,use_fast=True)
+processor = AutoProcessor.from_pretrained(model_name)
 
 SYSTEM_PROMPT = (
     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
