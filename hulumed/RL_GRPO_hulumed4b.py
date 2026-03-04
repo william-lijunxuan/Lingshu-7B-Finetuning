@@ -93,7 +93,8 @@ train_dataset = train_dataset.map(make_conversation)
 
 
 
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
+# train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
+train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en'])
 
 
 print("Loading model:",model_name)
@@ -103,15 +104,17 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     trust_remote_code=True,
 )
-processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True,)
-
 tokenizer = AutoTokenizer.from_pretrained(
     model_name,
     trust_remote_code=True,
     fix_mistral_regex=True,
 )
 
-processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+processor = AutoProcessor.from_pretrained(
+    model_name,
+    trust_remote_code=True,
+    padding_side="left",
+)
 processor.tokenizer = tokenizer
 
 if processor.tokenizer.pad_token_id is None:
