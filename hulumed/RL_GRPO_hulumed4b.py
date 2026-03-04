@@ -66,10 +66,7 @@ print(train_dataset[0]["image_name"])
 
 
 model_name = "/root/model/Hulu-Med-4B"
-processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
 
-if processor.tokenizer.pad_token_id is None:
-    processor.tokenizer.pad_token_id = processor.tokenizer.eos_token_id
 SYSTEM_PROMPT = (
     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
     "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
@@ -106,7 +103,7 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True,
     attn_implementation="flash_attention_2",
 )
-
+processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
 
 
 
