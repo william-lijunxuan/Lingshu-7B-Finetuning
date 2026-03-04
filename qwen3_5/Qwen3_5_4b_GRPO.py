@@ -156,7 +156,6 @@ def accuracy_reward(completions, solution, **kwargs):
             logger.info("idx=%d | reward=%.1f | gt='%s' | pred='%s'", i, reward, a_norm, p_norm)
     return rewards
 chat_template_kwargs= {
-    "tokenize" : False,
     "add_generation_prompt" :  True,
     "enable_thinking" :  False
 }
