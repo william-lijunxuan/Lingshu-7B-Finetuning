@@ -66,7 +66,11 @@ print(train_dataset[0]["image_name"])
 
 
 model_name = "/root/model/Hulu-Med-4B"
-processor = AutoProcessor.from_pretrained(model_name)
+processor = AutoProcessor.from_pretrained(model_name,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            attn_implementation="flash_attention_2")
 
 SYSTEM_PROMPT = (
     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
@@ -99,7 +103,7 @@ train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish',
 
 
 model = AutoModelForCausalLM.from_pretrained(
-    model_name, dtype=torch.bfloat16,
+    model_name, dtype=torch.bfloat16,trust_remote_code=True
 )
 
 
