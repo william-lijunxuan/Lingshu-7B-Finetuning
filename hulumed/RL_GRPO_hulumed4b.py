@@ -48,8 +48,8 @@ def is_rank0() -> bool:
         return torch.distributed.get_rank() == 0
     return True
 
-# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
 
 def to_abs_path(example):
     p = example["image_name"]
@@ -182,7 +182,7 @@ training_args = GRPOConfig(
 
     learning_rate=2e-5,
     #num_train_epochs=1,
-    max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
+    max_steps=10,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=8,
