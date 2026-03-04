@@ -1,30 +1,4 @@
 import os
-import sys
-import json
-import re
-import logging
-import traceback
-from datetime import datetime
-from difflib import SequenceMatcher
-
-import torch
-import datasets
-from datasets import Dataset
-from peft import LoraConfig
-from trl import GRPOConfig, GRPOTrainer
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
-
-# =========================
-# 0) Config
-# =========================
-DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
-BASE_IMG_DIR = "/root/dataset/skin/SkinCAP/skincap"
-
-MODEL_PATH = "/root/model/Hulu-Med-4B"
-OUTPUT_DIR = "/root/model/GRPO_hulumed4b"
-MODEL_TAG = "GRPO_hulumed4b"
-
-import os
 from datasets import load_dataset, Image
 from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 import torch
@@ -34,8 +8,11 @@ from trl import GRPOConfig,GRPOTrainer
 import logging
 import sys
 from datetime import datetime
-from  utils import _norm, _canonical,PARENT_MAP
+from  utils.utils import _norm, _canonical,PARENT_MAP
 
+# =========================
+# 0) Config
+# =========================
 output_dir = "/root/model/HUlu_4B-Instruct-trl-grpo"
 MODEL_TAG = "Hulu_4B"
 DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
