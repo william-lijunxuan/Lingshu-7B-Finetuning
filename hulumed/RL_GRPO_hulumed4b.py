@@ -102,7 +102,6 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16,
     device_map="auto",
     trust_remote_code=True,
-    attn_implementation="flash_attention_2",
 )
 processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
 
@@ -161,7 +160,6 @@ def accuracy_reward(completions, solution, **kwargs):
             logger.info("idx=%d | reward=%.1f | gt='%s' | pred='%s'", i, reward, a_norm, p_norm)
     return rewards
 chat_template_kwargs= {
-    "trust_remote_code" : True,
     "enable_thinking" :  False
 }
 
