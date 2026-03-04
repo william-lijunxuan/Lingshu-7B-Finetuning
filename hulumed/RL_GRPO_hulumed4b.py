@@ -1,4 +1,3 @@
-import os
 from datasets import load_dataset, Image
 from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 import torch
@@ -6,8 +5,9 @@ from peft import LoraConfig
 import re
 from trl import GRPOConfig,GRPOTrainer
 import logging
-import sys
 from datetime import datetime
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from  utils.utils import _norm, _canonical,PARENT_MAP
 
 # =========================
