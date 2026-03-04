@@ -8,7 +8,7 @@ from trl import GRPOConfig,GRPOTrainer
 import logging
 import sys
 from datetime import datetime
-from  qwen3vl.utils import _norm, _canonical,PARENT_MAP
+from  ..qwen3vl.utils import _norm, _canonical,PARENT_MAP
 
 output_dir = "/root/model/Qwen3_5_4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3_5_4B"
