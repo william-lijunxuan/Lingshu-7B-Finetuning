@@ -9,7 +9,34 @@ from datetime import datetime
 import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from  utils.utils import _norm, _canonical,PARENT_MAP
+class FullSequenceGenerateWrapper(torch.nn.Module):
+    def __init__(self, base):
+        super().__init__()
+        self.base = base
 
+    def forward(self, *args, **kwargs):
+        return self.base(*args, **kwargs)
+
+    def generate(self, *args, **kwargs):
+        # Try to retrieve input_ids passed to generate
+        input_ids = kwargs.get("input_ids", None)
+        if input_ids is None and len(args) > 0:
+            # common: generate(input_ids, ...)
+            if torch.is_tensor(args[0]):
+                input_ids = args[0]
+
+        out = self.base.generate(*args, **kwargs)
+
+        # If model returns only completion (shorter than prompt), concatenate prompt back
+        if input_ids is not None and out is not None and out.shape[1] < input_ids.shape[1]:
+            out = torch.cat([input_ids, out], dim=1)
+        return out
+
+    def __getattr__(self, name):
+        # delegate attributes (config, device, etc.)
+        if name in {"base", "generate", "forward"}:
+            return super().__getattr__(name)
+        return getattr(self.base, name)
 # =========================
 # 0) Config
 # =========================
@@ -104,6 +131,7 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     trust_remote_code=True,
 )
+model = FullSequenceGenerateWrapper(model)
 tokenizer = AutoTokenizer.from_pretrained(
     model_name,
     trust_remote_code=True,
