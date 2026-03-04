@@ -96,16 +96,17 @@ train_dataset = train_dataset.map(make_conversation)
 train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
-
+print("Loading model:",model_name)
 model = AutoModelForCausalLM.from_pretrained(
-    model_name,     torch_dtype=torch.bfloat16,
+    model_name,
+    torch_dtype=torch.bfloat16,
     device_map="auto",
     trust_remote_code=True,
     attn_implementation="flash_attention_2",
 )
 processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
 
-
+tokenizer = processor.tokenizer
 
 
 def extract_text(completions):

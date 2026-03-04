@@ -5,14 +5,13 @@ import torch
 from transformers import AutoProcessor
 from peft import LoraConfig
 import re
-# from math_verify import LatexExtractionConfig, parse, verify
-# from latex2sympy2_extended import NormalizationConfig
 from trl import GRPOConfig
 from trl import GRPOTrainer
 import logging
 import sys
 from datetime import datetime
-from  utils import _norm, _canonical,PARENT_MAP
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from  utils.utils import _norm, _canonical,PARENT_MAP
 from huggingface_hub import HfApi
 
 output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
@@ -105,7 +104,7 @@ train_dataset = train_dataset.map(make_conversation)
 train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
-
+print("Loading model:",model_name)
 model = Qwen3VLForConditionalGeneration.from_pretrained(
     model_name, dtype=torch.bfloat16,
 )

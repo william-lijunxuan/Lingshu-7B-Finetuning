@@ -364,7 +364,7 @@ def run():
 
     training_args = build_training_args()
     lora_config = build_lora_config()
-
+    print("Loading model:", CKPT)
     trainer = GRPOTrainer(
         model=CKPT,
         reward_funcs=[correctness_reward_func],

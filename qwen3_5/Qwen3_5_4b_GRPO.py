@@ -8,7 +8,8 @@ from trl import GRPOConfig,GRPOTrainer
 import logging
 import sys
 from datetime import datetime
-from  utils import _norm, _canonical,PARENT_MAP
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from  utils.utils import _norm, _canonical,PARENT_MAP
 
 output_dir = "/root/model/Qwen3_5_4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3_5_4B"
@@ -94,7 +95,7 @@ train_dataset = train_dataset.map(make_conversation)
 train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
-
+print("Loading model:",model_name)
 model = Qwen3_5ForConditionalGeneration.from_pretrained(
     model_name, dtype=torch.bfloat16,
 )
