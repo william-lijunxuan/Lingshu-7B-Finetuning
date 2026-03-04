@@ -1,24 +1,19 @@
 import os
 from datasets import load_dataset, Image
-from transformers import Qwen3VLForConditionalGeneration, BitsAndBytesConfig
+from transformers import Qwen3_5ForConditionalGeneration,AutoProcessor
 import torch
-from transformers import AutoProcessor
 from peft import LoraConfig
 import re
-# from math_verify import LatexExtractionConfig, parse, verify
-# from latex2sympy2_extended import NormalizationConfig
-from trl import GRPOConfig
-from trl import GRPOTrainer
+from trl import GRPOConfig,GRPOTrainer
 import logging
 import sys
 from datetime import datetime
 from  utils import _norm, _canonical,PARENT_MAP
-from huggingface_hub import HfApi
 
-output_dir = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct-trl-grpo"
-MODEL_TAG = "Qwen3VL_4B"
-DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
-IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
+output_dir = "/root/model/Qwen3_5_4B-Instruct-trl-grpo"
+MODEL_TAG = "Qwen3_5_4B"
+DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
+IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
 
 
 def setup_logging(model_tag: str):
@@ -39,7 +34,6 @@ def setup_logging(model_tag: str):
     sh.setFormatter(fmt)
     root.addHandler(fh)
     root.addHandler(sh)
-
     logger = logging.getLogger("grpo")
     logger.info("Log file: %s", log_file)
     return logger, log_file
@@ -52,8 +46,8 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:20]")
-print(f"dataset count: {len(train_dataset)}")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
+
 def to_abs_path(example):
     p = example["image_name"]
     if p and not os.path.isabs(p):
@@ -68,20 +62,15 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct" # "Qwen/Qwen3-VL-8B-Instruct"
-processor = AutoProcessor.from_pretrained(model_name, padding_side="left")
+model_name = "/root/model/Qwen3.5-4B"
+processor = AutoProcessor.from_pretrained(model_name,use_fast=True)
 
-# SYSTEM_PROMPT = (
-#     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
-#     "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
-#     "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
-# )
 SYSTEM_PROMPT = (
-  "You are given a clinical image and a question.\n"
-  "Respond EXACTLY in this format:\n"
-  "<answer>DISEASE_NAME_IN_ENGLISH</answer>\n"
-  "Do not output anything else."
+    "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
+    "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
+    "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 )
+
 
 def make_conversation(example):
     prompt = [
@@ -106,7 +95,7 @@ train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish',
 
 
 
-model = Qwen3VLForConditionalGeneration.from_pretrained(
+model = Qwen3_5ForConditionalGeneration.from_pretrained(
     model_name, dtype=torch.bfloat16,
 )
 
@@ -118,7 +107,7 @@ def extract_text(completions):
     processed = []
     for c in completions:
         if isinstance(c, list):
-            text = "".join(
+            text = " ".join(
                 item["text"] if isinstance(item, dict) and "text" in item
                 else str(item)
                 for item in c
@@ -131,17 +120,17 @@ def extract_text(completions):
     return processed
 
 def format_reward(completions, **kwargs):
-    pattern = r"^\s*<answer>\s*.+?\s*</answer>\s*$"
+    pattern = r"<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>"
     contents = extract_text(completions)
-    matches = [re.match(pattern, c, re.DOTALL) for c in contents]
-    return [1.0 if m else 0.0 for m in matches]
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in contents]
+    return [1.0 if match else 0.0 for match in matches]
 
 def accuracy_reward(completions, solution, **kwargs):
     contents = extract_text(completions)
     rewards = []
     for i, (content, sol) in enumerate(zip(contents, solution)):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
-        pred = re.sub(r'\s+', ' ', ans_match.group(1)).strip().lower() if ans_match else ""
+        pred = ans_match.group(1).strip().lower() if ans_match else ""
 
         a_norm = _norm(sol)
         p_norm = _norm(pred)
@@ -166,30 +155,22 @@ def accuracy_reward(completions, solution, **kwargs):
         if is_rank0():
             logger.info("idx=%d | reward=%.1f | gt='%s' | pred='%s'", i, reward, a_norm, p_norm)
     return rewards
-# def len_reward(completions, solution, **kwargs):
-#     contents = extract_text(completions)
-#
-#     correctness = []
-#     for content, sol in zip(contents, solution):
-#         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
-#         pred = ans_match.group(1).strip().lower() if ans_match else ""
-#         correctness.append(pred == sol.strip().lower())
-#
-#     lengths = [len(content) for content in contents]
-#     min_len = min(lengths)
-#     max_len = max(lengths)
-#
-#     if max_len == min_len:
-#         return [0.0] * len(completions)
-#
-#     rewards = []
-#     for length, is_correct in zip(lengths, correctness):
-#         lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
-#         reward = lambda_val if is_correct else min(0, lambda_val)
-#         rewards.append(float(reward))
-#
-#     return rewards
+chat_template_kwargs= {
+    "enable_thinking" :  False
+}
 
+
+generation_kwargs = {
+    "max_new_tokens": 256,         
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "top_k": 20,
+    "do_sample": True,
+    "repetition_penalty": 1.0,
+    "use_cache": True,
+    "pad_token_id": processor.tokenizer.eos_token_id,
+    "eos_token_id": processor.tokenizer.eos_token_id,
+}
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
@@ -198,7 +179,7 @@ training_args = GRPOConfig(
     max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=8,
     max_completion_length=256, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
@@ -213,7 +194,9 @@ training_args = GRPOConfig(
 
     # Hub integration
     push_to_hub=True,
-    log_completions=True
+    log_completions=True,
+    chat_template_kwargs=chat_template_kwargs,
+    generation_kwargs=generation_kwargs
 )
 
 
@@ -243,56 +226,21 @@ logger.info(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
 logger.info(f"{start_gpu_memory} GB of memory reserved.")
 
 
+trainer_stats = trainer.train()
 
 
+used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
+used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
+used_percentage = round(used_memory / max_memory * 100, 3)
+lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
 
-def run():
-    try:
-        logger.info("Starting training...")
-        trainer_stats = trainer.train()
+logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
+logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
+logger.info(f"Peak reserved memory = {used_memory} GB.")
+logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
+logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
+logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
-        used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
-        used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
-        used_percentage = round(used_memory / max_memory * 100, 3)
-        lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
-
-        logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
-        logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
-        logger.info(f"Peak reserved memory = {used_memory} GB.")
-        logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
-        logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
-        logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
-
-        trainer.save_model(output_dir)
-        trainer.push_to_hub("williamljx/qwen3vl-skinCap")
-        api = HfApi()
-        api.create_repo(
-            repo_id="williamljx/qwen3vl-skinCap-completions",
-            repo_type="dataset",
-            exist_ok=True,
-        )
-
-        api.upload_folder(
-            repo_id="williamljx/qwen3vl-skinCap-completions",
-            repo_type="dataset",
-            folder_path=os.path.join(output_dir, "completions"),
-            path_in_repo="completions",
-        )
-        logger.info("Congratulations! done!")
-
-    except KeyboardInterrupt:
-        if is_rank0():
-            logger.warning("Interrupted by user (KeyboardInterrupt). Log file: %s", log_path)
-        raise
-    except Exception as e:
-        if is_rank0():
-            import traceback
-            logger.error("Fatal error occurred. Log file: %s", log_path)
-            logger.error("Exception: %s", repr(e))
-            logger.error("Traceback:\n%s", traceback.format_exc())
-        raise
-    finally:
-        logging.shutdown()
-
-
-run()
+trainer.save_model(output_dir)
+trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+logger.info(f"Congratulations! done!")
