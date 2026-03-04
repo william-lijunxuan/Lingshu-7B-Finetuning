@@ -103,9 +103,19 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     trust_remote_code=True,
 )
-processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
+processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True,)
 
+tokenizer = AutoTokenizer.from_pretrained(
+    model_name,
+    trust_remote_code=True,
+    fix_mistral_regex=True,
+)
 
+processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+processor.tokenizer = tokenizer
+
+if processor.tokenizer.pad_token_id is None:
+    processor.tokenizer.pad_token_id = processor.tokenizer.eos_token_id
 
 def extract_text(completions):
     processed = []
@@ -173,7 +183,7 @@ generation_kwargs = {
     "do_sample": True,
     "repetition_penalty": 1.0,
     "use_cache": True,
-    "pad_token_id": processor.tokenizer.eos_token_id,
+    "pad_token_id": processor.tokenizer.pad_token_id,
     "eos_token_id": processor.tokenizer.eos_token_id,
 }
 
