@@ -70,3 +70,11 @@ cd /Lingshu-7B-Finetuning/qwen3vl
 accelerate config
 accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3VL_4b.py
 ```
+
+## Qwen3.5_4b
+```bash
+git stash save"RL_eval"
+git pull
+cd /Lingshu-7B-Finetuning/qwen3_5
+accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3_5_4b_GRPO.py
+```

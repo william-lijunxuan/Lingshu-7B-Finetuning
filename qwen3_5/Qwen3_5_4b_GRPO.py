@@ -10,10 +10,10 @@ import sys
 from datetime import datetime
 from  utils import _norm, _canonical,PARENT_MAP
 
-output_dir = "/root/model/Qwen3_5_4B-Instruct-trl-grpo"
+output_dir = "/mnt/d/skinalor/model/Qwen3_5_4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3_5_4B"
-DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
-IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
+IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
 
 def setup_logging(model_tag: str):
@@ -62,7 +62,7 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/root/model/Qwen3.5-4B"
+model_name = "/mnt/d/skinalor/model/Qwen3.5-4B"
 processor = AutoProcessor.from_pretrained(model_name,use_fast=True)
 
 SYSTEM_PROMPT = (
@@ -242,5 +242,5 @@ logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
 logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
 trainer.save_model(output_dir)
-trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+trainer.push_to_hub("williamljx/qwen3.5-skinCap")
 logger.info(f"Congratulations! done!")
