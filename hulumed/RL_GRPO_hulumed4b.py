@@ -174,7 +174,12 @@ generation_kwargs = {
     "do_sample": True,
     "repetition_penalty": 1.0,
     "use_cache": True,
+    "pad_token_id": processor.tokenizer.eos_token_id,
+    "eos_token_id": processor.tokenizer.eos_token_id,
 }
+
+print("eos_token_id:", processor.tokenizer.eos_token_id)
+print("pad_token_id:", processor.tokenizer.pad_token_id)
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
