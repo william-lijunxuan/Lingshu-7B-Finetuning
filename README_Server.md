@@ -78,3 +78,11 @@ git pull
 cd /Lingshu-7B-Finetuning/qwen3_5
 accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3_5_4b_GRPO.py
 ```
+
+## Hulu_4b
+```bash
+git stash save"RL_eval"
+git pull
+cd /Lingshu-7B-Finetuning/hulumed
+accelerate launch --num_processes=2 --mixed_precision=bf16 RL_GRPO_hulumed4b.py
+```
