@@ -242,5 +242,5 @@ logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
 logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
 trainer.save_model(output_dir)
-trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+trainer.push_to_hub("williamljx/qwen3_5_4b-skinCap")
 logger.info(f"Congratulations! done!")
