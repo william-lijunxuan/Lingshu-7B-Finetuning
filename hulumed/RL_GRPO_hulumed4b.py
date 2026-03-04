@@ -192,6 +192,24 @@ generation_kwargs = {
 
 print("eos_token_id:", processor.tokenizer.eos_token_id)
 print("pad_token_id:", processor.tokenizer.pad_token_id)
+
+
+ex = train_dataset[0]
+inputs = processor.apply_chat_template(
+    ex["prompt"],
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+)
+
+device = next(model.parameters()).device
+inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
+
+with torch.inference_mode():
+    out = model.generate(**inputs, do_sample=False, max_new_tokens=16)
+
+print("prompt_len:", inputs["input_ids"].shape[1], "out_len:", out.shape[1])
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
@@ -207,6 +225,7 @@ training_args = GRPOConfig(
     fp16=False,
     bf16=True,
     ddp_find_unused_parameters=True,
+    use_vllm=False,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
