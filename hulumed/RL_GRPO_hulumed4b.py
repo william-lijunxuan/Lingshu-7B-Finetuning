@@ -106,7 +106,6 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 processor = AutoProcessor.from_pretrained(model_name,trust_remote_code=True)
 
-tokenizer = processor.tokenizer
 
 
 def extract_text(completions):
@@ -175,8 +174,6 @@ generation_kwargs = {
     "do_sample": True,
     "repetition_penalty": 1.0,
     "use_cache": True,
-    "pad_token_id": processor.tokenizer.eos_token_id,
-    "eos_token_id": processor.tokenizer.eos_token_id,
 }
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
