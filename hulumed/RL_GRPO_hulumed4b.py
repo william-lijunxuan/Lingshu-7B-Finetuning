@@ -234,6 +234,7 @@ trainer = GRPOTrainer(
     args=training_args,
     train_dataset=train_dataset,
     peft_config=peft_config,
+    processing_class=processor,
 )
 
 gpu_stats = torch.cuda.get_device_properties(0)
