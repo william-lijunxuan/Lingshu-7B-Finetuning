@@ -1,27 +1,27 @@
 #!/bin/bash
 
 # Distributed training configuration
-NPROC_PER_NODE=${NPROC_PER_NODE:-1}
+NPROC_PER_NODE=${NPROC_PER_NODE:-2}
 MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
 MASTER_PORT=${MASTER_PORT:-$(shuf -i 20001-29999 -n 1)}
 NNODES=${WORLD_SIZE:-1}
 
 # DeepSpeed configuration
-deepspeed=/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
+deepspeed=/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json
 
 # Model configuration
-llm=/home/william/model/Lingshu-7B  # Using HuggingFace model ID
+llm=/mnt/d/skinalor/model/Lingshu-7B  # Using HuggingFace model ID
 
 # Training hyperparameters
 lr=2e-7
-batch_size=1
-grad_accum_steps=1
+batch_size=4
+grad_accum_steps=4
 
 # Training entry point
-entry_file=/home/william/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
+entry_file=/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/train/train_qwen.py
 
 # Dataset configuration (replace with public dataset names)
-datasets=derm1m
+datasets=/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl
 
 # Output configuration
 run_name="lingshu-7b-baseline"
@@ -45,6 +45,9 @@ args="
     --max_pixels 50176 \
     --min_pixels 784 \
     --lora_enable True\
+    --lora_r 8 \
+    --lora_alpha 16 \
+    --lora_dropout 0.0 \
     --eval_strategy no \
     --save_strategy steps \
     --save_steps 1000 \

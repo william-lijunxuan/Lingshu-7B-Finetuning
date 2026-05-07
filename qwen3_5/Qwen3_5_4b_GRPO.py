@@ -1,47 +1,18 @@
+import os
 from datasets import load_dataset, Image
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+from transformers import Qwen3_5ForConditionalGeneration,AutoProcessor
 import torch
 from peft import LoraConfig
 import re
 from trl import GRPOConfig,GRPOTrainer
 import logging
+import sys
 from datetime import datetime
-import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from  utils.utils import _norm, _canonical,PARENT_MAP
-class FullSequenceGenerateWrapper(torch.nn.Module):
-    def __init__(self, base):
-        super().__init__()
-        self.base = base
 
-    def forward(self, *args, **kwargs):
-        return self.base(*args, **kwargs)
-
-    def generate(self, *args, **kwargs):
-        # Try to retrieve input_ids passed to generate
-        input_ids = kwargs.get("input_ids", None)
-        if input_ids is None and len(args) > 0:
-            # common: generate(input_ids, ...)
-            if torch.is_tensor(args[0]):
-                input_ids = args[0]
-
-        out = self.base.generate(*args, **kwargs)
-
-        # If model returns only completion (shorter than prompt), concatenate prompt back
-        if input_ids is not None and out is not None and out.shape[1] < input_ids.shape[1]:
-            out = torch.cat([input_ids, out], dim=1)
-        return out
-
-    def __getattr__(self, name):
-        # delegate attributes (config, device, etc.)
-        if name in {"base", "generate", "forward"}:
-            return super().__getattr__(name)
-        return getattr(self.base, name)
-# =========================
-# 0) Config
-# =========================
-output_dir = "/mnt/d/skinalor/model/HUlu_4B-Instruct-trl-grpo"
-MODEL_TAG = "Hulu_4B"
+output_dir = "/mnt/d/skinalor/model/Qwen3_5_4B-Instruct-trl-grpo"
+MODEL_TAG = "Qwen3_5_4B"
 DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
 IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
@@ -75,8 +46,8 @@ def is_rank0() -> bool:
         return torch.distributed.get_rank() == 0
     return True
 
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
+# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
 
 def to_abs_path(example):
     p = example["image_name"]
@@ -93,6 +64,7 @@ print(train_dataset[0]["image_name"])
 
 
 model_name = "/mnt/d/skinalor/model/Qwen3.5-4B"
+processor = AutoProcessor.from_pretrained(model_name,use_fast=True)
 
 SYSTEM_PROMPT = (
     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
@@ -120,33 +92,17 @@ train_dataset = train_dataset.map(make_conversation)
 
 
 
-# train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en'])
+train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
 print("Loading model:",model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-    trust_remote_code=True,
-)
-model = FullSequenceGenerateWrapper(model)
-tokenizer = AutoTokenizer.from_pretrained(
-    model_name,
-    trust_remote_code=True,
-    fix_mistral_regex=True,
+model = Qwen3_5ForConditionalGeneration.from_pretrained(
+    model_name, dtype=torch.bfloat16,
 )
 
-processor = AutoProcessor.from_pretrained(
-    model_name,
-    trust_remote_code=True,
-    padding_side="left",
-)
-processor.tokenizer = tokenizer
 
-if processor.tokenizer.pad_token_id is None:
-    processor.tokenizer.pad_token_id = processor.tokenizer.eos_token_id
+
+
 
 def extract_text(completions):
     processed = []
@@ -206,38 +162,16 @@ chat_template_kwargs= {
 
 
 generation_kwargs = {
-    "max_new_tokens": 256,
-    "min_new_tokens": 8,
+    "max_new_tokens": 256,         
     "temperature": 0.7,
     "top_p": 0.8,
     "top_k": 20,
     "do_sample": True,
     "repetition_penalty": 1.0,
     "use_cache": True,
-    "pad_token_id": processor.tokenizer.pad_token_id,
+    "pad_token_id": processor.tokenizer.eos_token_id,
     "eos_token_id": processor.tokenizer.eos_token_id,
 }
-
-print("eos_token_id:", processor.tokenizer.eos_token_id)
-print("pad_token_id:", processor.tokenizer.pad_token_id)
-
-
-ex = train_dataset[0]
-inputs = processor.apply_chat_template(
-    ex["prompt"],
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
-)
-
-device = next(model.parameters()).device
-inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
-
-with torch.inference_mode():
-    out = model.generate(**inputs, do_sample=False, max_new_tokens=16)
-
-print("prompt_len:", inputs["input_ids"].shape[1], "out_len:", out.shape[1])
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
@@ -253,7 +187,6 @@ training_args = GRPOConfig(
     fp16=False,
     bf16=True,
     ddp_find_unused_parameters=True,
-    use_vllm=False,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
@@ -284,7 +217,6 @@ trainer = GRPOTrainer(
     args=training_args,
     train_dataset=train_dataset,
     peft_config=peft_config,
-    processing_class=processor,
 )
 
 gpu_stats = torch.cuda.get_device_properties(0)
@@ -311,5 +243,5 @@ logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
 logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
 
 trainer.save_model(output_dir)
-trainer.push_to_hub("williamljx/Hulu_4b-skinCap")
+trainer.push_to_hub("williamljx/qwen3.5_4b-skinCap")
 logger.info(f"Congratulations! done!")

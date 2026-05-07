@@ -7,19 +7,7 @@ cd /mnt/d/skinalor/model
 
 git clone https://github.com/william-lijunxuan/Lingshu-7B-Finetuning.git
 ```
-## Create conda env
 
-```bash
-cd Lingshu-7B-Finetuning
-
-conda env update -f environment.yml --prune
-
-conda activate lingshu
-
-cd qwenvl/train
-
-python run_sft.py
-```
 
 ## Download model
 Download it to the **model** directory.
@@ -53,9 +41,48 @@ done
 #unzip youtube.zip -d youtube
 
 ```
+## Create conda env
+
+```bash
+cd Lingshu-7B-Finetuning
+
+conda env update -f environment.yml --prune
+
+conda activate lingshu
+
+cd qwenvl/scripts
+
+bash sft_lingshu_7b.sh
+```
+
 ##  Login wandb
 ```bash
 wandb
 mr.william.ljx@gmail.com 
 1be3c3080c7714f2f5e1c1fb9e78ec54bdbc0193
+```
+
+
+## Qwen3VL_4b
+![img.png](img.png)
+```bash
+cd /Lingshu-7B-Finetuning/qwen3vl
+accelerate config
+accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3VL_4b.py
+```
+
+## Qwen3.5_4b
+```bash
+git stash save"RL_eval"
+git pull
+cd /Lingshu-7B-Finetuning/qwen3_5
+accelerate launch --num_processes=2 --mixed_precision=bf16 Qwen3_5_4b_GRPO.py
+```
+
+## Hulu_4b
+```bash
+git stash save"RL_eval"
+git pull
+cd /Lingshu-7B-Finetuning/hulumed
+accelerate launch --num_processes=2 --mixed_precision=bf16 RL_GRPO_hulumed4b.py
 ```

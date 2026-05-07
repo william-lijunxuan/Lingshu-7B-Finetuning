@@ -6,8 +6,8 @@ import shutil
 import pandas as pd
 from pathlib import Path
 
-BASE_DIR = "/home/william/dataset/skin/Derm1M"
-SRC_CSV  = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
+BASE_DIR = "/mnt/d/skinalor/dataset/skin/Derm1M"
+SRC_CSV  = "/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
 DST_DIR  = os.path.join(BASE_DIR, "HDimage")
 
 def main():

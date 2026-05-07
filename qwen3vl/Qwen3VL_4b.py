@@ -1,47 +1,21 @@
+import os
 from datasets import load_dataset, Image
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+from transformers import Qwen3VLForConditionalGeneration, BitsAndBytesConfig
 import torch
+from transformers import AutoProcessor
 from peft import LoraConfig
 import re
-from trl import GRPOConfig,GRPOTrainer
+from trl import GRPOConfig
+from trl import GRPOTrainer
 import logging
+import sys
 from datetime import datetime
-import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from  utils.utils import _norm, _canonical,PARENT_MAP
-class FullSequenceGenerateWrapper(torch.nn.Module):
-    def __init__(self, base):
-        super().__init__()
-        self.base = base
+from huggingface_hub import HfApi
 
-    def forward(self, *args, **kwargs):
-        return self.base(*args, **kwargs)
-
-    def generate(self, *args, **kwargs):
-        # Try to retrieve input_ids passed to generate
-        input_ids = kwargs.get("input_ids", None)
-        if input_ids is None and len(args) > 0:
-            # common: generate(input_ids, ...)
-            if torch.is_tensor(args[0]):
-                input_ids = args[0]
-
-        out = self.base.generate(*args, **kwargs)
-
-        # If model returns only completion (shorter than prompt), concatenate prompt back
-        if input_ids is not None and out is not None and out.shape[1] < input_ids.shape[1]:
-            out = torch.cat([input_ids, out], dim=1)
-        return out
-
-    def __getattr__(self, name):
-        # delegate attributes (config, device, etc.)
-        if name in {"base", "generate", "forward"}:
-            return super().__getattr__(name)
-        return getattr(self.base, name)
-# =========================
-# 0) Config
-# =========================
-output_dir = "/mnt/d/skinalor/model/HUlu_4B-Instruct-trl-grpo"
-MODEL_TAG = "Hulu_4B"
+output_dir = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct-trl-grpo"
+MODEL_TAG = "Qwen3VL_4B"
 DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
 IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
@@ -64,6 +38,7 @@ def setup_logging(model_tag: str):
     sh.setFormatter(fmt)
     root.addHandler(fh)
     root.addHandler(sh)
+
     logger = logging.getLogger("grpo")
     logger.info("Log file: %s", log_file)
     return logger, log_file
@@ -75,9 +50,9 @@ def is_rank0() -> bool:
         return torch.distributed.get_rank() == 0
     return True
 
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
-
+# train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:20]")
+print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
     if p and not os.path.isabs(p):
@@ -92,14 +67,20 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/mnt/d/skinalor/model/Qwen3.5-4B"
+model_name = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct" # "Qwen/Qwen3-VL-8B-Instruct"
+processor = AutoProcessor.from_pretrained(model_name, padding_side="left")
 
+# SYSTEM_PROMPT = (
+#     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
+#     "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
+#     "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+# )
 SYSTEM_PROMPT = (
-    "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."
-    "You first think about the reasoning process as an internal monologue and then provide the user with the answer. "
-    "Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
+  "You are given a clinical image and a question.\n"
+  "Respond EXACTLY in this format:\n"
+  "<answer>DISEASE_NAME_IN_ENGLISH</answer>\n"
+  "Do not output anything else."
 )
-
 
 def make_conversation(example):
     prompt = [
@@ -120,39 +101,23 @@ train_dataset = train_dataset.map(make_conversation)
 
 
 
-# train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en'])
+train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en','image'])
 
 
 print("Loading model:",model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-    trust_remote_code=True,
-)
-model = FullSequenceGenerateWrapper(model)
-tokenizer = AutoTokenizer.from_pretrained(
-    model_name,
-    trust_remote_code=True,
-    fix_mistral_regex=True,
+model = Qwen3VLForConditionalGeneration.from_pretrained(
+    model_name, dtype=torch.bfloat16,
 )
 
-processor = AutoProcessor.from_pretrained(
-    model_name,
-    trust_remote_code=True,
-    padding_side="left",
-)
-processor.tokenizer = tokenizer
 
-if processor.tokenizer.pad_token_id is None:
-    processor.tokenizer.pad_token_id = processor.tokenizer.eos_token_id
+
+
 
 def extract_text(completions):
     processed = []
     for c in completions:
         if isinstance(c, list):
-            text = " ".join(
+            text = "".join(
                 item["text"] if isinstance(item, dict) and "text" in item
                 else str(item)
                 for item in c
@@ -165,17 +130,17 @@ def extract_text(completions):
     return processed
 
 def format_reward(completions, **kwargs):
-    pattern = r"<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>"
+    pattern = r"^\s*<answer>\s*.+?\s*</answer>\s*$"
     contents = extract_text(completions)
-    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in contents]
-    return [1.0 if match else 0.0 for match in matches]
+    matches = [re.match(pattern, c, re.DOTALL) for c in contents]
+    return [1.0 if m else 0.0 for m in matches]
 
 def accuracy_reward(completions, solution, **kwargs):
     contents = extract_text(completions)
     rewards = []
     for i, (content, sol) in enumerate(zip(contents, solution)):
         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
-        pred = ans_match.group(1).strip().lower() if ans_match else ""
+        pred = re.sub(r'\s+', ' ', ans_match.group(1)).strip().lower() if ans_match else ""
 
         a_norm = _norm(sol)
         p_norm = _norm(pred)
@@ -200,44 +165,30 @@ def accuracy_reward(completions, solution, **kwargs):
         if is_rank0():
             logger.info("idx=%d | reward=%.1f | gt='%s' | pred='%s'", i, reward, a_norm, p_norm)
     return rewards
-chat_template_kwargs= {
-    "enable_thinking" :  False
-}
+# def len_reward(completions, solution, **kwargs):
+#     contents = extract_text(completions)
+#
+#     correctness = []
+#     for content, sol in zip(contents, solution):
+#         ans_match = re.search(r"<answer>\s*(.*?)\s*</answer>", content, re.DOTALL)
+#         pred = ans_match.group(1).strip().lower() if ans_match else ""
+#         correctness.append(pred == sol.strip().lower())
+#
+#     lengths = [len(content) for content in contents]
+#     min_len = min(lengths)
+#     max_len = max(lengths)
+#
+#     if max_len == min_len:
+#         return [0.0] * len(completions)
+#
+#     rewards = []
+#     for length, is_correct in zip(lengths, correctness):
+#         lambda_val = 0.5 - (length - min_len) / (max_len - min_len)
+#         reward = lambda_val if is_correct else min(0, lambda_val)
+#         rewards.append(float(reward))
+#
+#     return rewards
 
-
-generation_kwargs = {
-    "max_new_tokens": 256,
-    "min_new_tokens": 8,
-    "temperature": 0.7,
-    "top_p": 0.8,
-    "top_k": 20,
-    "do_sample": True,
-    "repetition_penalty": 1.0,
-    "use_cache": True,
-    "pad_token_id": processor.tokenizer.pad_token_id,
-    "eos_token_id": processor.tokenizer.eos_token_id,
-}
-
-print("eos_token_id:", processor.tokenizer.eos_token_id)
-print("pad_token_id:", processor.tokenizer.pad_token_id)
-
-
-ex = train_dataset[0]
-inputs = processor.apply_chat_template(
-    ex["prompt"],
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
-)
-
-device = next(model.parameters()).device
-inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
-
-with torch.inference_mode():
-    out = model.generate(**inputs, do_sample=False, max_new_tokens=16)
-
-print("prompt_len:", inputs["input_ids"].shape[1], "out_len:", out.shape[1])
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
@@ -246,14 +197,13 @@ training_args = GRPOConfig(
     max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=8,
+    per_device_train_batch_size=4,
     max_completion_length=256, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
     fp16=False,
     bf16=True,
     ddp_find_unused_parameters=True,
-    use_vllm=False,
 
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
@@ -262,9 +212,7 @@ training_args = GRPOConfig(
 
     # Hub integration
     push_to_hub=True,
-    log_completions=True,
-    chat_template_kwargs=chat_template_kwargs,
-    generation_kwargs=generation_kwargs
+    log_completions=True
 )
 
 
@@ -284,7 +232,6 @@ trainer = GRPOTrainer(
     args=training_args,
     train_dataset=train_dataset,
     peft_config=peft_config,
-    processing_class=processor,
 )
 
 gpu_stats = torch.cuda.get_device_properties(0)
@@ -295,21 +242,56 @@ logger.info(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
 logger.info(f"{start_gpu_memory} GB of memory reserved.")
 
 
-trainer_stats = trainer.train()
 
 
-used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
-used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
-used_percentage = round(used_memory / max_memory * 100, 3)
-lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
 
-logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
-logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
-logger.info(f"Peak reserved memory = {used_memory} GB.")
-logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
-logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
-logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
+def run():
+    try:
+        logger.info("Starting training...")
+        trainer_stats = trainer.train()
 
-trainer.save_model(output_dir)
-trainer.push_to_hub("williamljx/Hulu_4b-skinCap")
-logger.info(f"Congratulations! done!")
+        used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
+        used_memory_for_lora = round(used_memory - start_gpu_memory, 3)
+        used_percentage = round(used_memory / max_memory * 100, 3)
+        lora_percentage = round(used_memory_for_lora / max_memory * 100, 3)
+
+        logger.info(f"{trainer_stats.metrics['train_runtime']} seconds used for training.")
+        logger.info(f"{round(trainer_stats.metrics['train_runtime']/60, 2)} minutes used for training.")
+        logger.info(f"Peak reserved memory = {used_memory} GB.")
+        logger.info(f"Peak reserved memory for training = {used_memory_for_lora} GB.")
+        logger.info(f"Peak reserved memory % of max memory = {used_percentage} %.")
+        logger.info(f"Peak reserved memory for training % of max memory = {lora_percentage} %.")
+
+        trainer.save_model(output_dir)
+        trainer.push_to_hub("williamljx/qwen3vl-skinCap")
+        api = HfApi()
+        api.create_repo(
+            repo_id="williamljx/qwen3vl-skinCap-completions",
+            repo_type="dataset",
+            exist_ok=True,
+        )
+
+        api.upload_folder(
+            repo_id="williamljx/qwen3vl-skinCap-completions",
+            repo_type="dataset",
+            folder_path=os.path.join(output_dir, "completions"),
+            path_in_repo="completions",
+        )
+        logger.info("Congratulations! done!")
+
+    except KeyboardInterrupt:
+        if is_rank0():
+            logger.warning("Interrupted by user (KeyboardInterrupt). Log file: %s", log_path)
+        raise
+    except Exception as e:
+        if is_rank0():
+            import traceback
+            logger.error("Fatal error occurred. Log file: %s", log_path)
+            logger.error("Exception: %s", repr(e))
+            logger.error("Traceback:\n%s", traceback.format_exc())
+        raise
+    finally:
+        logging.shutdown()
+
+
+run()

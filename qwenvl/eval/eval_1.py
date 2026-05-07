@@ -3,10 +3,10 @@ from qwen_vl_utils import process_vision_info
 import torch
 from peft import PeftModel
 
-BASE = "/home/william/model/Lingshu-7B"
-ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/output"
-# ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/train/output"
-IMAGE = "/home/william/dataset/skin/Derm1M/IIYI/7_3.png"
+BASE = "/mnt/d/skinalor/model/Lingshu-7B"
+ADAPTER = "/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/scripts/output"
+# ADAPTER = "/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/train/output"
+IMAGE = "/mnt/d/skinalor/dataset/skin/Derm1M/IIYI/7_3.png"
 
 
 # We recommend enabling flash_attention_2 for better acceleration and memory saving, especially in multi-image and video scenarios.

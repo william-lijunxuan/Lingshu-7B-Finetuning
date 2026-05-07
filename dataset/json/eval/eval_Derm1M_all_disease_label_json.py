@@ -8,10 +8,10 @@ import pandas as pd
 from pathlib import Path
 
 # Inputs/outputs
-CSV_PATH = r"/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv".replace("\\", "/")
-OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "eval_Derm1M_train_json_1k2.jsonl")
+CSV_PATH = r"/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv".replace("\\", "/")
+OUT_PATH = os.path.join(os.path.dirname(CSV_PATH), "eval_Derm1M_train_json_1k.jsonl")
 
-N_SAMPLES = 150
+N_SAMPLES = 1000
 SEED = 42
 
 
@@ -124,7 +124,6 @@ def main():
                 "image": row["filename"],
                 "caption": row["caption"],
                 "answer": row["disease_label"],
-                "body_location": row["body_location"],
                 "question_type": "close_end_QA"
             }
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")

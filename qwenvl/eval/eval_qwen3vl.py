@@ -1,9 +1,9 @@
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 import torch
 from peft import PeftModel
-model_path = "/home/william/model/Qwen3-VL-8B-Thinking"
-ADAPTER = "/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/outputqwen3vl"
-IMAGE = "/home/william/dataset/skin/Derm1M/IIYI/7_3.png"
+model_path = "/mnt/d/skinalor/model/Qwen3-VL-8B-Thinking"
+ADAPTER = "/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/scripts/outputqwen3vl"
+IMAGE = "/mnt/d/skinalor/dataset/skin/Derm1M/IIYI/7_3.png"
 prompt = (
     "You are a board‐certified dermatology AI specialist. A patient has just uploaded an image of a skin lesion. "
     "Carefully examine the lesion’s visual features—color, shape, borders, surface texture, and anatomic location—and "

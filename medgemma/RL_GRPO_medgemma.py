@@ -17,23 +17,21 @@ from trl import GRPOConfig, GRPOTrainer
 # =========================
 # 0) Config
 # =========================
-DATA_PATH = "/home/william/dataset/skin/SkinCAP/SkinCAP_20250712_121252_close_end_QA.json"
-BASE_IMG_DIR = "/home/william/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
+BASE_IMG_DIR = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
 
-CKPT = "/home/william/model/medgemma-1.5-4b-it"
-OUTPUT_DIR = "/home/william/model/GRPO_medgemma4b"
+CKPT = "/mnt/d/skinalor/model/medgemma-1.5-4b-it"
+OUTPUT_DIR = "/mnt/d/skinalor/model/GRPO_medgemma4b"
 
-# TRAIN_SIZE = 3900
-# EVAL_SIZE = 100
+# TRAIN_SIZE = 100
+# EVAL_SIZE = 50
 
-TRAIN_SIZE = 4
-EVAL_SIZE = 2
+TRAIN_SIZE = 3773
+EVAL_SIZE = 100
 
 MODEL_TAG = "gemma1.5_4b_it"
 
-# If your TRL / model expects multimodal chat content that includes image inside prompt,
-# set this True. Otherwise keep False and let trainer/model pick image from dataset column.
-PROMPT_WITH_IMAGE_IN_CONTENT = False
+
 
 MAX_Q_CHARS = 800
 MAX_A_CHARS = 400
@@ -128,6 +126,8 @@ def to_prompt(ex):
         "question_type": str(ex.get("question_type", "")),
         "image": ex["image_path"],
     }
+
+
 
 
 def build_dataset():
@@ -267,6 +267,35 @@ def correctness_reward_func(
 # =========================
 # 4) Train config
 # =========================
+# def build_training_args():
+#     return GRPOConfig(
+#         output_dir=OUTPUT_DIR,
+#         eval_on_start=False,
+#         learning_rate=5e-6,
+#         per_device_train_batch_size=1,
+#         gradient_accumulation_steps=4,
+#         num_generations=4,
+#         max_prompt_length=256,
+#         max_completion_length=512,
+#         max_steps=1700,
+#         logging_steps=20,
+#         save_steps=100,
+#         eval_strategy="steps",
+#         eval_steps=100,
+#         report_to="tensorboard",
+#         use_vllm=False,
+#         vllm_mode="colocate",
+#         vllm_gpu_memory_utilization=0.30,
+#         bf16=True,
+#         gradient_checkpointing=True,
+#         gradient_checkpointing_kwargs={"use_reentrant": False},
+#         model_init_kwargs={
+#             # "device_map": "auto",
+#             "dtype": torch.bfloat16,
+#             "attn_implementation": "eager",
+#         },
+#         push_to_hub=True,
+#     )
 def build_training_args():
     return GRPOConfig(
         output_dir=OUTPUT_DIR,
@@ -279,7 +308,7 @@ def build_training_args():
         num_generations=4,
 
         max_prompt_length=128,
-        max_completion_length=256,
+        max_completion_length=128,
 
         max_steps=1700,
         logging_steps=20,
@@ -291,7 +320,7 @@ def build_training_args():
 
         use_vllm=True,
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.45,   # 0.30
+        vllm_gpu_memory_utilization=0.5555,   # 0.30
         bf16=True,
 
         gradient_checkpointing=True,
@@ -299,7 +328,7 @@ def build_training_args():
 
         model_init_kwargs={
             "dtype": torch.bfloat16,
-            "attn_implementation": "eager",
+            "attn_implementation": "sdpa",
         },
 
         push_to_hub=False,
@@ -309,9 +338,9 @@ def build_training_args():
 def build_lora_config():
     return LoraConfig(
         task_type="CAUSAL_LM",
-        r=64,
-        lora_alpha=64,
-        target_modules="all-linear",
+        r=16,
+        lora_alpha=32,
+        target_modules=["q_proj", "v_proj"],
     )
 
 
@@ -335,7 +364,7 @@ def run():
 
     training_args = build_training_args()
     lora_config = build_lora_config()
-
+    print("Loading model:", CKPT)
     trainer = GRPOTrainer(
         model=CKPT,
         reward_funcs=[correctness_reward_func],

@@ -12,7 +12,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:1024"
 
 # 配置常量
-LOCAL_SAVE_PATH = "/home/william/model/Lingshu-7B"
+LOCAL_SAVE_PATH = "/mnt/d/skinalor/model/Lingshu-7B"
 output_dir="./output_dir/Lingshu-7B-ft"
 DATA_PATH = "./config/XXX.json"
 MAX_LENGTH = 8192

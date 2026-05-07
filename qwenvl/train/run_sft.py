@@ -8,9 +8,9 @@ from qwenvl.train.argument import ModelArguments, DataArguments, TrainingArgumen
 
 def main():
     cfg = {
-        "deepspeed": "/home/william/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json",
-        "model_name_or_path": "/home/william/model/Lingshu-7B",
-        # "dataset_use": "/home/william/dataset/skin/Derm1M/Derm1M_train.jsonl",
+        "deepspeed": "/mnt/d/skinalor/model/Lingshu-7B-Finetuning/qwenvl/scripts/zero3.json",
+        "model_name_or_path": "/mnt/d/skinalor/model/Lingshu-7B",
+        # "dataset_use": "/mnt/d/skinalor/dataset/skin/Derm1M/Derm1M_train.jsonl",
         "dataset_use": "derm1m",
         "data_flatten": True,
         "tune_mm_vision": False,
@@ -49,11 +49,11 @@ def main():
     model_args, data_args, training_args = parser.parse_dict(cfg)
 
 
-    os.environ.setdefault("MASTER_ADDR", "127.0.0.1")
-    os.environ.setdefault("MASTER_PORT", "23456")
-    os.environ.setdefault("WORLD_SIZE", "1")
-    os.environ.setdefault("RANK", "0")
-    os.environ.setdefault("LOCAL_RANK", "0")
+    # os.environ.setdefault("MASTER_ADDR", "127.0.0.1")
+    # os.environ.setdefault("MASTER_PORT", "23456")
+    # os.environ.setdefault("WORLD_SIZE", "1")
+    # os.environ.setdefault("RANK", "0")
+    # os.environ.setdefault("LOCAL_RANK", "0")
 
 
     import sys
