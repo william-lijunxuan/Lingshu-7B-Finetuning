@@ -195,12 +195,12 @@ def accuracy_reward(completions, solution, **kwargs):
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
 
-    learning_rate=2e-5,
+    learning_rate=5e-6,
     #num_train_epochs=1,
     max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=8,
     max_completion_length=256, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
