@@ -251,7 +251,7 @@ training_args = GRPOConfig(
 
     use_vllm=True,
     vllm_mode="colocate",
-    vllm_gpu_memory_utilization=0.65,  # 0.30
+    vllm_gpu_memory_utilization=0.55,  # 0.30
     vllm_max_model_length=8192,
 
     dataloader_num_workers=8,
