@@ -201,7 +201,6 @@ training_args = GRPOConfig(
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=4,
-    generation_batch_size=32,
     max_completion_length=64, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
