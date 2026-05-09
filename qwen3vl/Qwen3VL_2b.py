@@ -91,12 +91,12 @@ def make_conversation(example):
         {
             "role": "user",
             "content": [
-                {"type": "image"},
+                {"type": "image","image": example["image_name"]},
                 {"type": "text", "text": "Image description: "+example["caption_zh_polish_en"]},
             ],
         },
     ]
-    return {"prompt": prompt, "image": example["image_name"], "solution": example["answer"] }
+    return {"prompt": prompt,"solution": example["answer"] }
 train_dataset = train_dataset.map(make_conversation)
 
 
