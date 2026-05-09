@@ -40,10 +40,10 @@ class FullSequenceGenerateWrapper(torch.nn.Module):
 # =========================
 # 0) Config
 # =========================
-output_dir = "/mnt/d/skinalor/model/HUlu_4B-Instruct-trl-grpo"
+output_dir = "/root/model/HUlu_4B-Instruct-trl-grpo"
 MODEL_TAG = "Hulu_4B"
-DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
-IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
+IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
 
 
 def setup_logging(model_tag: str):
@@ -92,7 +92,7 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/mnt/d/skinalor/model/Qwen3.5-4B"
+model_name = "/root/model/Qwen3.5-4B"
 
 SYSTEM_PROMPT = (
     "You are given a clinical image and a question.\n Return ONLY the disease name in English. No extra words."

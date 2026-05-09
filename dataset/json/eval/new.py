@@ -7,7 +7,7 @@ import random
 import pandas as pd
 from pathlib import Path
 
-CSV_PATH = "/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
+CSV_PATH = "/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv"
 BASE_DIR = os.path.dirname(CSV_PATH)
 
 EXISTING_JSONL = os.path.join(BASE_DIR, "eval_Derm1M_train_json_1k.jsonl")

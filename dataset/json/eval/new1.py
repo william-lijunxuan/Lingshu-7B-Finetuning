@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-FILE_PATH = Path("/home/william/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean.jsonl")
+FILE_PATH = Path("/root/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean.jsonl")
 
 images = []
 

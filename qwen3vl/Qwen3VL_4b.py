@@ -14,10 +14,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from  utils.utils import _norm, _canonical,PARENT_MAP
 from huggingface_hub import HfApi
 
-output_dir = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct-trl-grpo"
+output_dir = "/root/model/Qwen3-VL-4B-Instruct-trl-grpo"
 MODEL_TAG = "Qwen3VL_4B"
-DATA_PATH = "/mnt/d/skinalor/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
-IMAGE_ROOT = "/mnt/d/skinalor/dataset/skin/SkinCAP/skincap"
+DATA_PATH = "/root/dataset/skin/SkinCAP/SkinCAP_20260208_173640_close_end_QA.json"
+IMAGE_ROOT = "/root/dataset/skin/SkinCAP/skincap"
 
 
 def setup_logging(model_tag: str):
@@ -67,7 +67,7 @@ print(train_dataset[0]["image_name"])
 
 
 
-model_name = "/mnt/d/skinalor/model/Qwen3-VL-4B-Instruct" # "Qwen/Qwen3-VL-8B-Instruct"
+model_name = "/root/model/Qwen3-VL-4B-Instruct" # "Qwen/Qwen3-VL-8B-Instruct"
 processor = AutoProcessor.from_pretrained(model_name, padding_side="left")
 
 # SYSTEM_PROMPT = (

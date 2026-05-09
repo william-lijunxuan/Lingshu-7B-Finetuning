@@ -6,9 +6,9 @@ import pandas as pd
 from pathlib import Path
 
 
-CSV_PATH = Path("/home/william/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv")
-IN_JSONL = Path("/home/william/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean.jsonl")
-OUT_JSONL = Path("/home/william/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean_new.jsonl")
+CSV_PATH = Path("/root/dataset/skin/Derm1M/Derm1M_v2_pretrain_HD.csv")
+IN_JSONL = Path("/root/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean.jsonl")
+OUT_JSONL = Path("/root/dataset/skin/Derm1M/eval_Derm1M_train_json_1k_clean_new.jsonl")
 
 
 def norm_path(p: str) -> str:
