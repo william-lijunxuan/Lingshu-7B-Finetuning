@@ -1,5 +1,6 @@
 import os
-from datasets import load_dataset, Image
+from datasets import load_dataset
+from PIL import Image as PILImage
 from transformers import Qwen3VLForConditionalGeneration, BitsAndBytesConfig
 import torch
 from transformers import AutoProcessor
@@ -51,18 +52,7 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
-print(f"dataset count: {len(train_dataset)}")
-def to_abs_path(example):
-    p = example["image_name"]
-    if p and not os.path.isabs(p):
-        example["image_name"] = os.path.join(IMAGE_ROOT, p)
-    return example
 
-train_dataset = train_dataset.map(to_abs_path)
-train_dataset = train_dataset.cast_column("image_name", Image())
-
-print(train_dataset[0]["image_name"])
 
 
 
@@ -82,26 +72,76 @@ SYSTEM_PROMPT = (
   "Do not output anything else."
 )
 
-def make_conversation(example):
-    prompt = [
-        {
-            "role": "system",
-            "content": [{"type": "text", "text": SYSTEM_PROMPT}],
-        },
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": example["image_name"]},
-                {"type": "text", "text": "Image description: "+example["caption_zh_polish_en"]},
-            ],
-        },
-    ]
-    return {"prompt": prompt, "image": example["image_name"], "solution": example["answer"] }
-train_dataset = train_dataset.map(make_conversation)
+train_dataset = load_dataset(
+    "json",
+    data_files={"train": DATA_PATH},
+    split="train",
+)
+
+print(f"dataset count: {len(train_dataset)}")
+
+def to_abs_path(example):
+    p = example["image_name"]
+    if p and not os.path.isabs(p):
+        example["image_name"] = os.path.join(IMAGE_ROOT, p)
+    return example
+
+train_dataset = train_dataset.map(to_abs_path)
+
+def make_conversation_batch(batch):
+    prompts = []
+    solutions = []
+
+    for image_path, caption, answer in zip(
+        batch["image_name"],
+        batch["caption_zh_polish_en"],
+        batch["answer"],
+    ):
+        image = PILImage.open(image_path).convert("RGB")
+
+        prompt = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "image": image,
+                    },
+                    {
+                        "type": "text",
+                        "text": "Image description: " + caption,
+                    },
+                ],
+            },
+        ]
+
+        prompts.append(prompt)
+        solutions.append(answer)
+
+    return {
+        "prompt": prompts,
+        "solution": solutions,
+    }
+
+train_dataset = train_dataset.with_transform(make_conversation_batch)
+
+sample = train_dataset[0]
+print(sample["prompt"])
+print(sample["solution"])
 
 
 
-train_dataset = train_dataset.remove_columns(['caption_zh', 'caption_zh_polish', 'answer','question_type','image_name','caption_zh_polish_en'])
+
+
 
 
 print("Loading model:",model_name)
