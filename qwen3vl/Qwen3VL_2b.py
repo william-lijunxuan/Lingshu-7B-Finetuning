@@ -201,6 +201,7 @@ training_args = GRPOConfig(
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
     per_device_train_batch_size=8,
+    generation_batch_size=16,
     max_completion_length=64, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
@@ -210,7 +211,8 @@ training_args = GRPOConfig(
 
     use_vllm=True,
     vllm_mode="colocate",
-    vllm_gpu_memory_utilization=0.70,  # 0.30
+    vllm_gpu_memory_utilization=0.65,  # 0.30
+    vllm_max_model_length=4096,
 
     dataloader_num_workers=8,
 
