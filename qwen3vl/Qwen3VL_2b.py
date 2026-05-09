@@ -51,7 +51,7 @@ def is_rank0() -> bool:
     return True
 
 # train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:1%]")
-train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train[:20]")
+train_dataset = load_dataset("json", data_files={"train": DATA_PATH}, split="train")
 print(f"dataset count: {len(train_dataset)}")
 def to_abs_path(example):
     p = example["image_name"]
@@ -200,22 +200,29 @@ training_args = GRPOConfig(
     max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=8,
-    max_completion_length=256, # default: 256            # Max completion length produced during training
+    per_device_train_batch_size=4,
+    generation_batch_size=32,
+    max_completion_length=64, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
     fp16=False,
     bf16=True,
     ddp_find_unused_parameters=True,
 
+    use_vllm=True,
+    vllm_mode="colocate",
+    vllm_gpu_memory_utilization=0.70,  # 0.30
+
+    dataloader_num_workers=8,
+
     # Parameters related to reporting and saving
     output_dir=output_dir,                                # Where to save model checkpoints and logs
-    logging_steps=1,                                      # Log training metrics every N steps
+    logging_steps=10,                                      # Log training metrics every N steps
     report_to="trackio",                                  # Experiment tracking tool
 
     # Hub integration
     push_to_hub=True,
-    log_completions=True
+    log_completions=False
 )
 
 
