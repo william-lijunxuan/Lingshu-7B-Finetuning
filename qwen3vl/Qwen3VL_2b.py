@@ -240,8 +240,8 @@ training_args = GRPOConfig(
     max_steps=3400,                                        # Number of dataset passes. For full trainings, use `num_train_epochs` instead
     # num_train_epochs=3,
     # Parameters that control the data preprocessing
-    per_device_train_batch_size=8,
-    generation_batch_size=16,                           # If `None`, it defaults to the effective training batch size:`per_device_train_batch_size * num_processes * steps_per_generation`. In other words, there is one generation batch processed per optimization step.
+    per_device_train_batch_size=4,
+    generation_batch_size=8,                           # If `None`, it defaults to the effective training batch size:`per_device_train_batch_size * num_processes * steps_per_generation`. In other words, there is one generation batch processed per optimization step.
     max_completion_length=64, # default: 256            # Max completion length produced during training
     num_generations=8, # 2, # default: 8                  # Number of generations produced during training for comparison
 
