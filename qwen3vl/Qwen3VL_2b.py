@@ -252,7 +252,7 @@ training_args = GRPOConfig(
     use_vllm=True,
     vllm_mode="colocate",
     vllm_gpu_memory_utilization=0.65,  # 0.30
-    vllm_max_model_length=4096,
+    vllm_max_model_length=12288,
 
     dataloader_num_workers=8,
 
@@ -263,7 +263,7 @@ training_args = GRPOConfig(
 
     # Hub integration
     push_to_hub=True,
-    log_completions=False
+    log_completions=True
 )
 
 
