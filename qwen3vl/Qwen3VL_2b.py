@@ -91,12 +91,12 @@ def make_conversation(example):
         {
             "role": "user",
             "content": [
-                {"type": "image","image": example["image_name"]},
+                {"type": "image"},
                 {"type": "text", "text": "Image description: "+example["caption_zh_polish_en"]},
             ],
         },
     ]
-    return {"prompt": prompt,"solution": example["answer"] }
+    return {"prompt": prompt, "image": example["image_name"], "solution": example["answer"] }
 train_dataset = train_dataset.map(make_conversation)
 
 
@@ -209,10 +209,10 @@ training_args = GRPOConfig(
     bf16=True,
     ddp_find_unused_parameters=True,
 
-    use_vllm=True,
-    vllm_mode="colocate",
-    vllm_gpu_memory_utilization=0.65,  # 0.30
-    vllm_max_model_length=4096,
+    # use_vllm=True,
+    # vllm_mode="colocate",
+    # vllm_gpu_memory_utilization=0.65,  # 0.30
+    # vllm_max_model_length=4096,
 
     dataloader_num_workers=8,
 
